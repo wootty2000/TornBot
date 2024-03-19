@@ -40,6 +40,7 @@ namespace TornBot.Services.Discord.Services
         private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly DiscordClient discord;
         private SlashCommandsExtension slashCommands;
+        private static DiscordClient Client { get; set; }
 
         public DiscordService(IConfigurationRoot config, ILogger<DiscordService> logger, IHostApplicationLifetime applicationLifetime)
         {
@@ -109,6 +110,27 @@ namespace TornBot.Services.Discord.Services
         private async Task GuildDownload(DiscordClient sender, GuildDownloadCompletedEventArgs args)
         {
         }
+        public string GetStocksChannelId()
+        {
+            return _config.GetValue<string>("StocksChannelId");
+        }
 
+        public DiscordClient GetClient()
+        {
+            
+
+            var discordConfig = new DiscordConfiguration()
+            {
+                Intents = DiscordIntents.All,
+                Token = _config.GetValue<string>("Token"),
+                TokenType = TokenType.Bot,
+                AutoReconnect = true,
+
+            };
+
+            Client = new DiscordClient(discordConfig);
+
+            return Client;
+        }
     }
 }

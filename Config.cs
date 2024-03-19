@@ -59,6 +59,9 @@ namespace TornBot
         [JsonProperty("TornstatsApiKey")]
         internal string TornstatsApiKey = "TornStats API";
 
+        [JsonProperty("StocksChannelId")]
+        internal string StocksChannelId = "Channel ID";
+
         /// <summary>
         /// Loads config from a JSON file.
         /// </summary>

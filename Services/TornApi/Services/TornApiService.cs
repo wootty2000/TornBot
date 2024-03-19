@@ -74,5 +74,21 @@ namespace TornBot.Services.TornApi.Services
 
             return tornPlayer;
         }
+
+        public TornApi.Entities.StockResponse GetStocks()
+        {
+            string key = tornApiKeys.GetNextKey();
+            string url = String.Format("torn/?selections=stocks&key={0}", key);
+            string apiResponse = MakeApiRequest(url);
+            bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
+
+            if (responseHandled)
+            {
+                return null;
+            }
+            TornApi.Entities.StockResponse stocks = JsonSerializer.Deserialize<TornApi.Entities.StockResponse>(apiResponse);
+
+            return stocks;
+        }
     }
 }
