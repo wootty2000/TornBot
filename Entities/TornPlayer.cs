@@ -24,24 +24,29 @@ namespace TornBot.Entities
         private UInt32 id;
         private string name;
         private TornFaction faction;
+        private UInt16 level;
 
         public TornPlayer()
         { }
 
-        public TornPlayer(UInt32 id, string name, TornFaction tornFaction)
+        public TornPlayer(UInt32 id, string name, TornFaction tornFaction, UInt16 lvl)
         {
             this.id = id;
             this.name = name;
             this.faction = tornFaction;
+            this.level = lvl;
         }
 
         public UInt32 Id
         { get { return id; } set { id = value; } }
 
         public string Name
-        { get { return name; } set {  name = value; } }
+        { get { return name; } set { name = value; } }
 
         public TornFaction Faction
-        { get { return faction; } set {  faction = value; } }
+        { get { return faction; } set { faction = value; } }
+
+        public UInt16 Level
+        { get { return level; } set { level = value; } }
     }
 }

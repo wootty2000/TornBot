@@ -61,8 +61,13 @@ namespace TornBot.Services.TornApi.Services
             string url = String.Format("user/{0}?key={1}", playerId.ToString(), apiKey);
             string apiResponse = MakeApiRequest(url);
 
-            // TODO
-            // Add error handling here
+            bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
+
+            if (responseHandled)
+            {
+                return null;
+            }
+
             TornApi.Entities.User user = JsonSerializer.Deserialize<TornApi.Entities.User>(apiResponse);
 
             TornBot.Entities.TornPlayer tornPlayer = user.ToTornPlayer();

@@ -60,20 +60,21 @@ namespace TornBot.Services.TornStatsApi.Services
             }
         }
 
-        public TornBot.Entities.Stats GetStats(UInt32 id)
+        public TornBot.Entities.Stats GetStats(string id)
         {
             string key = _tornStatsApiKeys.GetNextKey();
 
             return GetPlayer(id, key);
         }
 
-        public TornBot.Entities.Stats GetPlayer(UInt32 playerId, string apiKey)
+        public TornBot.Entities.Stats GetPlayer(string playerId, string apiKey)
         {
-            string url = String.Format("v2/{0}/spy/user/{1}", apiKey, playerId.ToString());
+            string url = String.Format("v2/{0}/spy/user/{1}", apiKey, playerId);
             string apiResponse = MakeApiRequest(url);
 
-            //Return if the response was null
-            if(apiResponse == null)
+            bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
+
+            if (responseHandled)
             {
                 return null;
             }
@@ -89,7 +90,7 @@ namespace TornBot.Services.TornStatsApi.Services
             catch (Exception e)
             {
                 _logger.LogError(e, "Error deserializing TornStats API Spy");
-                
+
                 return null;
             }
         }

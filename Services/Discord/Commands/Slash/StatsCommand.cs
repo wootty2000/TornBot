@@ -42,24 +42,30 @@ namespace TornBot.Services.Discord.Commands.Slash
         [SlashCommand("Stats", "Gets the stats of a player")]
         public async Task Stats(
             InteractionContext ctx,
-            [Option("PlayerID", "ID of the player")] long id)
+            [Option("PlayerID", "ID of the player or name")] string id)
         {
             await ctx.DeferAsync();
 
-            Entities.TornPlayer player = tornApiService.GetPlayer((UInt32)id);
-            Entities.Stats stats = tornstatsApi.GetStats((UInt32)id);
-            
-            //If either of the objects is null, then tell the user there was an error
-            if(player == null || stats == null)
-            {
-                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats"));
+            id = id.Replace(" ", ""); //this is to make sure there is no space before id/name
 
+            Entities.Stats stats = tornstatsApi.GetStats(id);
+            if (stats == null)
+            {
+                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats from TornStats"));
+                return;
+            }
+
+            Entities.TornPlayer player = tornApiService.GetPlayer(stats.PlayerId);
+            if (player == null)
+            {
+                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats from Torn"));
                 return;
             }
 
             //Build a response for the user
             DiscordEmbedBuilder embed = new DiscordEmbedBuilder();
-            embed.Title = String.Format("{0} [{1}]", player.Name, id);
+            embed.Title = String.Format("{0} [{1}]", player.Name, player.Id);
+            embed.Description = "Lvl: " + player.Level + "\n" + "Faction: " + player.Faction.Name;
 
             embed.AddField("Stats:",
                 "Strength: " + stats.Strength.ToString("N0", CultureInfo.InvariantCulture) + "\n" +
