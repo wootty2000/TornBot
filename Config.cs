@@ -57,7 +57,6 @@ namespace TornBot
         [JsonProperty("TornstatsApiKey")]
         internal string TornstatsApiKey = "TornStats API";
 
-
         [JsonProperty("DbHost")]
         internal string DbHost = "localhost";
 
@@ -70,7 +69,10 @@ namespace TornBot
         [JsonProperty("DbDatabase")]
         internal string DbDatabase = "tornbot";
 
+        [JsonProperty("StocksChannelId")]
+        internal string StocksChannelId = "Channel ID";
 
+      
         /// <summary>
         /// Loads config from a JSON file.
         /// </summary>
