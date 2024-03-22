@@ -65,6 +65,5 @@ namespace TornBot.Entities
         public DateTime TotalTimestamp { get { return totalTimestamp; } set { totalTimestamp = value; } }
 
         public DateTime StatsTimestamp { get { return statsTimestamp; } set {  statsTimestamp = value; } }
-
     }
 }

@@ -21,8 +21,8 @@ namespace TornBot.Entities
 {
     public class TornFaction
     {
-        private UInt32 id;
-        private string name;
+        private UInt32 id = 0;
+        private string name = "";
 
         public UInt32 Id { get { return id; } set { id = value; } }
 

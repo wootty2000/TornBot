@@ -60,16 +60,16 @@ namespace TornBot.Services.TornStatsApi.Services
             }
         }
 
-        public TornBot.Entities.Stats GetStats(string id)
+        public TornBot.Entities.Stats GetPlayerStats(string playerIdOrName)
         {
             string key = _tornStatsApiKeys.GetNextKey();
 
-            return GetPlayer(id, key);
+            return GetPlayerStats(playerIdOrName, key);
         }
 
-        public TornBot.Entities.Stats GetPlayer(string playerId, string apiKey)
+        public TornBot.Entities.Stats GetPlayerStats(string playerIdOrName, string apiKey)
         {
-            string url = String.Format("v2/{0}/spy/user/{1}", apiKey, playerId);
+            string url = String.Format("v2/{0}/spy/user/{1}", apiKey, playerIdOrName);
             string apiResponse = MakeApiRequest(url);
 
             bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
