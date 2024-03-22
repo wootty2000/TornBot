@@ -18,20 +18,21 @@
 //
 
 using Microsoft.Extensions.DependencyInjection;
-using TornBot.Services.TornStatsApi.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using TornBot.Services.Players.Service;
 
-namespace TornBot.Services.TornStatsApi
+namespace TornBot.Services.Players
 {
-    public class TornStatsApiModule : IModule
+    public class PlayersModule : IModule
     {
-        public TornStatsApiModule()
-        {
-        }
-
         public IServiceCollection RegisterModule(IServiceCollection services)
         {
-            services.AddSingleton<TornStatsApiKeys>();
-            services.AddSingleton<TornStatsApiService>();
+            //services.AddSingleton<PlayersService>();
+            services.AddScoped<PlayersService>();
 
             return services;
         }

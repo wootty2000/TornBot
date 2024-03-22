@@ -17,10 +17,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 using System.Globalization;
+using TornBot.Services.Players.Service;
 using TornBot.Services.TornApi.Services;
 using TornBot.Services.TornStatsApi.Services;
 
@@ -28,15 +28,12 @@ namespace TornBot.Services.Discord.Commands.Slash
 {
     public class StatsCommand : ApplicationCommandModule
     {
-        TornApiService tornApiService;
-        TornStatsApiService tornstatsApi;
+        PlayersService _players;
 
         public StatsCommand(
-            TornApiService tornAPIService,
-            TornStatsApiService tornstatsApi)
+            PlayersService players)
         {
-            this.tornApiService = tornAPIService;
-            this.tornstatsApi = tornstatsApi;
+            _players = players;
         }
 
         [SlashCommand("Stats", "Gets the stats of a player")]
@@ -46,21 +43,34 @@ namespace TornBot.Services.Discord.Commands.Slash
         {
             await ctx.DeferAsync();
 
-            id = id.Replace(" ", ""); //this is to make sure there is no space before id/name
+            //id = id.Replace(" ", ""); //this is to make sure there is no space before id/name
+            id = id.Trim(); 
 
-            Entities.Stats stats = tornstatsApi.GetStats(id);
+            UInt32 idUInt;
+            Entities.TornPlayer player;
+            if (UInt32.TryParse(id, out idUInt))
+            {
+                player = _players.GetPlayer(idUInt);
+            }
+            else 
+            {
+                player = _players.GetPlayer(id); 
+            }
+
+            if (player == null)
+            {
+                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats from Torn"));
+                return;
+            }
+
+            Entities.Stats stats = _players.GetStats(player.Id);
+
             if (stats == null)
             {
                 ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats from TornStats"));
                 return;
             }
 
-            Entities.TornPlayer player = tornApiService.GetPlayer(stats.PlayerId);
-            if (player == null)
-            {
-                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats from Torn"));
-                return;
-            }
 
             //Build a response for the user
             DiscordEmbedBuilder embed = new DiscordEmbedBuilder();

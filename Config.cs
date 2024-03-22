@@ -19,8 +19,6 @@
 
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
-using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace TornBot
@@ -59,9 +57,22 @@ namespace TornBot
         [JsonProperty("TornstatsApiKey")]
         internal string TornstatsApiKey = "TornStats API";
 
+        [JsonProperty("DbHost")]
+        internal string DbHost = "localhost";
+
+        [JsonProperty("DbUser")]
+        internal string DbUser = "tornbot";
+
+        [JsonProperty("DbPass")]
+        internal string DbPass = "tornbot";
+
+        [JsonProperty("DbDatabase")]
+        internal string DbDatabase = "tornbot";
+
         [JsonProperty("StocksChannelId")]
         internal string StocksChannelId = "Channel ID";
 
+      
         /// <summary>
         /// Loads config from a JSON file.
         /// </summary>

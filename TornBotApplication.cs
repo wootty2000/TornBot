@@ -21,9 +21,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using TornBot.Services;
 using Microsoft.AspNetCore.Builder;
-using System.Globalization;
-using System.Net.NetworkInformation;
 using System.Diagnostics;
+using TornBot.Database;
 
 namespace TornBot
 {
@@ -43,8 +42,14 @@ namespace TornBot
             var builder = WebApplication.CreateBuilder();
             var services = builder.Services;
 
-            services.AddSingleton(config); // Add the configuration to the registered services
-            ModuleExtensions.RegisterModules(services); // RegisterModules will find all the IModule modules and call their module's RegisterModule function
+            // Add the configuration to the registered services
+            services.AddSingleton(config); 
+
+            //Get the database setup
+            DatabaseContext.Init(config, services);
+
+            // RegisterModules will find all the IModule modules and call the module's RegisterModule function
+            ModuleExtensions.RegisterModules(services); 
 
             serviceProvider = services.BuildServiceProvider();
 

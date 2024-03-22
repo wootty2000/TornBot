@@ -49,16 +49,16 @@ namespace TornBot.Services.TornApi.Services
             }
         }
 
-        public TornBot.Entities.TornPlayer GetPlayer(UInt32 playerId)
+        public TornBot.Entities.TornPlayer? GetPlayer(string playerIdOrName)
         {
             string key = tornApiKeys.GetNextKey();
 
-            return GetPlayer(playerId, key);
+            return GetPlayer(playerIdOrName, key);
         }
 
-        public TornBot.Entities.TornPlayer GetPlayer(UInt32 playerId, string apiKey)
+        public TornBot.Entities.TornPlayer? GetPlayer(string playerIdOrName, string apiKey)
         {
-            string url = String.Format("user/{0}?key={1}", playerId.ToString(), apiKey);
+            string url = String.Format("user/{0}?key={1}", playerIdOrName, apiKey);
             string apiResponse = MakeApiRequest(url);
 
             bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
