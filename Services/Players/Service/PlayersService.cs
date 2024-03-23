@@ -40,6 +40,7 @@ namespace TornBot.Services.Players.Service
         ) 
         {
             _database = database;
+            _torn = torn;
             _tornStats = tornStats;
         }
 
