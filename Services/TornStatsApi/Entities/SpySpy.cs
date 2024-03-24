@@ -118,10 +118,8 @@ namespace TornBot.Services.TornStatsApi.Entities
         //[JsonPropertyName("deltaTotal")]
        //public UInt64 DeltaTotal { get; set; }
 
+       [JsonPropertyName("total_timestamp")]
         public UInt32 TotalTimestamp { get; set; }
-
-        [JsonPropertyName("effective_total")]
-        public UInt64 EffectiveTotal { get; set; }
     }
 
 }

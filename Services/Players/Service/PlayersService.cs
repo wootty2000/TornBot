@@ -45,31 +45,18 @@ namespace TornBot.Services.Players.Service
         }
 
         
-        public Entities.TornPlayer GetPlayer(UInt32 id, bool forceUpdate = false)
+        public Entities.TornPlayer? GetPlayer(UInt32 id, bool forceUpdate = false)
         {
+            Entities.TornPlayer? tornPlayer;
+
             // Lets try and get a record from the database. If there is no record, we get given a null
             Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Id == id).FirstOrDefault();
-
-            return GetPlayerWorker(id.ToString(), dbPlayer, forceUpdate);
-        }
-
-        public Entities.TornPlayer GetPlayer(string name, bool forceUpdate = false)
-        {
-            // Lets try and get a record from the database. If there is no record, we get given a null
-            Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name  == name).FirstOrDefault();
-
-            return GetPlayerWorker(name, dbPlayer, forceUpdate);
-        }
-
-        private Entities.TornPlayer GetPlayerWorker(string idOrName, Database.Entities.TornPlayer? dbPlayer, bool forceUpdate = false)
-        {
-            Entities.TornPlayer tornPlayer;
 
             // Check what we got from the database
             if (dbPlayer == null)
             {
                 // There was no record in the database. Fetch from Torn API and add to the database
-                tornPlayer = _torn.GetPlayer(idOrName);
+                tornPlayer = _torn.GetPlayer(id);
                 if (tornPlayer != null)
                 {
                     _database.TornPlayers.Add(new Database.Entities.TornPlayer(tornPlayer));
@@ -84,7 +71,7 @@ namespace TornBot.Services.Players.Service
             {
                 // We have a record in the database, but it's stale so we need to update with a fresh pull
                 // Or, we were told to idOrName get a fresh copy
-                tornPlayer = _torn.GetPlayer(idOrName);
+                tornPlayer = _torn.GetPlayer(id);
                 if(tornPlayer != null)
                 {
                     _database.TornPlayers.Update(new Database.Entities.TornPlayer(dbPlayer.Id, tornPlayer));
@@ -101,28 +88,102 @@ namespace TornBot.Services.Players.Service
                 return dbPlayer.ToTornPlayer();
             }
         }
+        
 
-        public Entities.Stats GetStats(string IdOrName, bool checkUpdate = false)
+        public Entities.TornPlayer GetPlayer(string name, bool forceUpdate = false)
         {
-            UInt32 idUInt;
-            Database.Entities.Stats? dbStats;
-            if (UInt32.TryParse(IdOrName, out idUInt))
+            TornBot.Entities.TornPlayer? tornPlayer;
+            
+            // Lets try and get a record from the database. If there is no record, we get given a null
+            Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name  == name).FirstOrDefault();
+
+            if (dbPlayer != null)
             {
-                dbStats = _database.Stats.Where(s => s.PlayerId == idUInt).FirstOrDefault();
-            }
-            else
-            {
-                Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name == IdOrName).FirstOrDefault();
-                if (dbPlayer != null)
+                //Check to see if the local cache is stale or forceUpdate is true
+                if (dbPlayer.LastUpdated.CompareTo(DateTime.Now.AddDays(-MaxTornPlayerCacheAge)) < 0 || forceUpdate)
                 {
-                    dbStats = _database.Stats.Where(s => s.PlayerId == dbPlayer.Id).FirstOrDefault();
+                    //Lets pull a copy from Torn, based on the Id from the local cache
+                    tornPlayer = _torn.GetPlayer(dbPlayer.Id);
+                    if (tornPlayer != null && tornPlayer.Name == name)
+                    {
+                        //The players has not changed their name. We now have a valid player Id
+                        _database.TornPlayers.Update(new TornBot.Database.Entities.TornPlayer(tornPlayer));
+                        _database.SaveChanges();
+                        return tornPlayer;
+                    }
+                    else
+                    {
+                        //The local cache name doesnt match the return from Torn. 
+                        //We can use TornStats spy lookup on a name
+                        Entities.Stats tsStats = GetStats(name, true);
+                        if (tsStats != null)
+                        {
+                            return GetPlayer(tsStats.PlayerId, true);
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                    }
                 }
                 else
                 {
-                    dbStats = null;
+                    return dbPlayer.ToTornPlayer();
                 }
-
             }
+            else
+            {
+                Entities.Stats stats = GetStats(name, true);
+                if (stats != null)
+                {
+                    UInt32 id = stats.PlayerId;
+                    
+                    tornPlayer = _torn.GetPlayer(id);
+                    if (tornPlayer != null)
+                    {
+                        _database.TornPlayers.Add(new Database.Entities.TornPlayer(tornPlayer));
+                        _database.SaveChanges();
+
+                        return tornPlayer;
+                    }
+                    else
+                        return null; 
+                }
+                else
+                {
+                    return null;
+                }
+            }
+        }
+
+        public Entities.Stats? GetStats(string IdOrName, bool checkUpdate = false)
+        {
+            UInt32 idUInt;
+            Database.Entities.Stats? dbStats = null;
+            
+            //If we have checkUpdate we want to skip this so that we try to get something from TornStats
+            if (!checkUpdate)
+            {
+                if (UInt32.TryParse(IdOrName, out idUInt))
+                {
+                    dbStats = _database.Stats.Where(s => s.PlayerId == idUInt).FirstOrDefault();
+                }
+                else
+                {
+                    Database.Entities.TornPlayer? dbPlayer =
+                        _database.TornPlayers.Where(s => s.Name == IdOrName).FirstOrDefault();
+                    if (dbPlayer != null)
+                    {
+                        dbStats = _database.Stats.Where(s => s.PlayerId == dbPlayer.Id).FirstOrDefault();
+                    }
+                    else
+                    {
+                        dbStats = null;
+                    }
+
+                }
+            }
+
             //If
             // 1) we get a valid stats from the Database
             // 2) the stats are less than 2 weeks old
@@ -140,7 +201,7 @@ namespace TornBot.Services.Players.Service
             {
                 // We need to figure out what, if anything, we can send back
                 //Lets try and get some stats from TornStats
-                Entities.Stats tsStats = _tornStats.GetPlayerStats(IdOrName.ToString());
+                Entities.Stats tsStats = _tornStats.GetPlayerStats(IdOrName);
 
                 //If we have nothing, end game
                 if(dbStats == null && tsStats == null)
