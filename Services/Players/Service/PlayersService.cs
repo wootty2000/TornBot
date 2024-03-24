@@ -55,7 +55,6 @@ namespace TornBot.Services.Players.Service
 
         public Entities.TornPlayer GetPlayer(string name, bool forceUpdate = false)
         {
-
             // Lets try and get a record from the database. If there is no record, we get given a null
             Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name  == name).FirstOrDefault();
 
@@ -103,10 +102,27 @@ namespace TornBot.Services.Players.Service
             }
         }
 
-        public Entities.Stats GetStats(UInt32 playerId, bool checkUpdate = false)
+        public Entities.Stats GetStats(string IdOrName, bool checkUpdate = false)
         {
-            Database.Entities.Stats? dbStats = _database.Stats.Where(s => s.PlayerId == playerId).FirstOrDefault();
+            UInt32 idUInt;
+            Database.Entities.Stats? dbStats;
+            if (UInt32.TryParse(IdOrName, out idUInt))
+            {
+                dbStats = _database.Stats.Where(s => s.PlayerId == idUInt).FirstOrDefault();
+            }
+            else
+            {
+                Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name == IdOrName).FirstOrDefault();
+                if (dbPlayer != null)
+                {
+                    dbStats = _database.Stats.Where(s => s.PlayerId == dbPlayer.Id).FirstOrDefault();
+                }
+                else
+                {
+                    dbStats = null;
+                }
 
+            }
             //If
             // 1) we get a valid stats from the Database
             // 2) the stats are less than 2 weeks old
@@ -123,9 +139,8 @@ namespace TornBot.Services.Players.Service
             else
             {
                 // We need to figure out what, if anything, we can send back
-
                 //Lets try and get some stats from TornStats
-                Entities.Stats tsStats = _tornStats.GetPlayerStats(playerId.ToString());
+                Entities.Stats tsStats = _tornStats.GetPlayerStats(IdOrName.ToString());
 
                 //If we have nothing, end game
                 if(dbStats == null && tsStats == null)
@@ -139,7 +154,7 @@ namespace TornBot.Services.Players.Service
                     return dbStats.ToStats();
                 }
                 else
-                { 
+                {
                     // We might have something from the DB
                     // We do have something from TS
 

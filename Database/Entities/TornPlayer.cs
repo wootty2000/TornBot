@@ -22,6 +22,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TornBot.Entities;
 
 namespace TornBot.Database.Entities
 {
@@ -31,6 +32,8 @@ namespace TornBot.Database.Entities
         public string Name { get; set; }
         public UInt16 Level { get; set; }
         public DateTime LastUpdated { get; set; }
+        public string Faction_Name { get; set; }
+        public UInt32 Faction_ID { get; set; }
 
         public TornPlayer() { }
 
@@ -40,6 +43,8 @@ namespace TornBot.Database.Entities
             Id = tornPlayer.Id;
             Name = tornPlayer.Name;
             Level = tornPlayer.Level;
+            Faction_Name = tornPlayer.Faction.Name;
+            Faction_ID = tornPlayer.Faction.Id;
             LastUpdated = DateTime.UtcNow;
         }
 
@@ -50,6 +55,8 @@ namespace TornBot.Database.Entities
             Id = id;
             Name = tornPlayer.Name;
             Level = tornPlayer.Level;
+            Faction_Name = tornPlayer.Faction.Name;
+            Faction_ID = tornPlayer.Faction.Id;
             LastUpdated = DateTime.UtcNow;
         }
 
@@ -59,7 +66,10 @@ namespace TornBot.Database.Entities
             tornPlayer.Id = Id;
             tornPlayer.Name = Name;
             tornPlayer.Level = Level;
-
+            TornBot.Entities.TornFaction tornFaction = new TornBot.Entities.TornFaction();
+            tornFaction.Name = Faction_Name;
+            tornFaction.Id = Faction_ID;
+            tornPlayer.Faction = tornFaction;
             return tornPlayer;
         }
         

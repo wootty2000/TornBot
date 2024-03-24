@@ -44,30 +44,22 @@ namespace TornBot.Services.Discord.Commands.Slash
             await ctx.DeferAsync();
 
             //id = id.Replace(" ", ""); //this is to make sure there is no space before id/name
-            id = id.Trim(); 
+            id = id.Trim();
 
-            UInt32 idUInt;
-            Entities.TornPlayer player;
-            if (UInt32.TryParse(id, out idUInt))
-            {
-                player = _players.GetPlayer(idUInt);
-            }
-            else 
-            {
-                player = _players.GetPlayer(id); 
-            }
+            Entities.Stats stats = _players.GetStats(id);
 
-            if (player == null)
-            {
-                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats from Torn"));
-                return;
-            }
-
-            Entities.Stats stats = _players.GetStats(player.Id);
 
             if (stats == null)
             {
                 ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats from TornStats"));
+                return;
+            }
+
+            Entities.TornPlayer player = _players.GetPlayer(stats.PlayerId);
+
+            if (player == null)
+            {
+                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats from Torn"));
                 return;
             }
 

@@ -79,6 +79,7 @@ namespace TornBot.Database.Entities
             stats.DexterityTimestamp = DexterityTimestamp;
             stats.Total = Total;
             stats.TotalTimestamp = TotalTimestamp;
+            stats.StatsTimestamp = Timestamp;
 
             return stats;
         }

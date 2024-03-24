@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using TornBot.Database.Entities;
 using static System.Net.Mime.MediaTypeNames;
+using MySql.Data.MySqlClient;
 
 namespace TornBot.Database
 {
@@ -34,8 +35,8 @@ namespace TornBot.Database
             var path = Environment.GetFolderPath(folder);
             String DbPath = System.IO.Path.Join(path, "tornbot.db");
 
-            //services.AddDbContext<DatabaseContext>(options => options.UseMySQL(connectionString), ServiceLifetime.Transient);
-            services.AddDbContext<DatabaseContext>(options => options.UseSqlite($"Data Source={DbPath}"));
+            services.AddDbContext<DatabaseContext>(options => options.UseMySQL(connectionString), ServiceLifetime.Transient);
+            //services.AddDbContext<DatabaseContext>(options => options.UseSqlite($"Data Source={DbPath}"));
 
             /*services.AddDbContext<DatabaseContext>(
                 options => _ = provider switch

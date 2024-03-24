@@ -34,6 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Database\Migrations\" />
     <Folder Include="Services\TornBotWeb\Web\" />
   </ItemGroup>
 
