@@ -45,6 +45,7 @@ namespace TornBot.Services.Cron.Jobs
     {
         TornApiService tornApiService;
         DiscordService discordService;
+        DiscordClient discord;
 
         private static decimal[,] arrayOFstocks = new decimal[35, 2];
 
@@ -55,11 +56,12 @@ namespace TornBot.Services.Cron.Jobs
             return "4/30 * * * * ? *";
         }
         
-        public Stocks(ILogger<Stocks> logger, TornApiService tornAPIService, DiscordService discordService)
+        public Stocks(ILogger<Stocks> logger, TornApiService tornAPIService, DiscordService discordService, DiscordClient discord)
         {
             _logger = logger;
             this.tornApiService = tornAPIService;
             this.discordService = discordService;
+            this.discord = discord;
         }
         
         public Task Execute(IJobExecutionContext context)
@@ -166,9 +168,7 @@ namespace TornBot.Services.Cron.Jobs
 
                         long channel_id = long.Parse(discordService.GetStocksChannelId());
 
-                        DiscordClient Client = discordService.GetClient();
-
-                        var channel = Client.GetChannelAsync((ulong)channel_id);
+                        var channel = discord.GetChannelAsync((ulong)channel_id);
                         channel.ContinueWith((task) =>
                         {
                             if (task.IsCompletedSuccessfully && task.Result is DiscordChannel textChannel)

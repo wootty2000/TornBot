@@ -115,22 +115,5 @@ namespace TornBot.Services.Discord.Services
             return _config.GetValue<string>("StocksChannelId");
         }
 
-        public DiscordClient GetClient()
-        {
-            
-
-            var discordConfig = new DiscordConfiguration()
-            {
-                Intents = DiscordIntents.All,
-                Token = _config.GetValue<string>("Token"),
-                TokenType = TokenType.Bot,
-                AutoReconnect = true,
-
-            };
-
-            Client = new DiscordClient(discordConfig);
-
-            return Client;
-        }
     }
 }
