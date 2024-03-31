@@ -17,18 +17,14 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+using Microsoft.Extensions.DependencyInjection;
 using Quartz;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TornBot.Services.Cron.Infrastructure
 {
     public interface WorkerJob : IJob
     {
-        public abstract static string GetCronExpression();
-
+        public static abstract void AddJob(IServiceCollection services);
+        
     }
 }

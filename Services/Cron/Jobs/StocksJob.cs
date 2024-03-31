@@ -17,31 +17,18 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Quartz;
-using TornBot.Entities;
 using TornBot.Services.Cron.Infrastructure;
-using TornBot.Services.TornApi.Entities;
 using TornBot.Services.TornApi.Services;
 using TornBot.Services.Discord.Services;
-using TornBot.Services.TornStatsApi.Services;
 using DSharpPlus;
 using DSharpPlus.Entities;
-using DSharpPlus.SlashCommands;
-using System.Numerics;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TornBot.Services.Cron.Jobs
 {
-
-    public class Stocks : WorkerJob
+    public class StocksJob : WorkerJob
     {
         TornApiService tornApiService;
         DiscordService discordService;
@@ -49,14 +36,24 @@ namespace TornBot.Services.Cron.Jobs
 
         private static decimal[,] arrayOFstocks = new decimal[35, 2];
 
-        private readonly ILogger<Stocks> _logger;
-
-        public static string GetCronExpression()
+        private readonly ILogger<StocksJob> _logger;
+        private static string _cronExpression = "4/30 * * * * ? *";
+        
+        public static void AddJob(IServiceCollection services)
         {
-            return "4/30 * * * * ? *";
+            services.AddQuartz(conf =>
+            {
+                JobKey jobKey = new JobKey("StocksJob-Job", "Cron");
+                conf.AddJob<StocksJob>(j => j.WithIdentity(jobKey));
+                conf.AddTrigger(trigger => trigger
+                    .WithIdentity("StocksJob-Trigger", "Cron")
+                    .ForJob(jobKey)
+                    .WithCronSchedule(_cronExpression));
+            });
+            services.AddSingleton<StocksJob>();
         }
         
-        public Stocks(ILogger<Stocks> logger, TornApiService tornAPIService, DiscordService discordService, DiscordClient discord)
+        public StocksJob(ILogger<StocksJob> logger, TornApiService tornAPIService, DiscordService discordService, DiscordClient discord)
         {
             _logger = logger;
             this.tornApiService = tornAPIService;

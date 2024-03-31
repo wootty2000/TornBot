@@ -26,49 +26,37 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using TornBot.Services.Cron.Jobs;
-using TornBot.Services.Cron.Services;
-using TornBot.Services.Cron.Infrastructure.JobFactory;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
+using TornBot.Database;
 using TornBot.Services.Cron.Infrastructure;
 
 namespace TornBot.Services.Cron
 {
-    public class CromModule : IModule
+    public class CronModule : IModule
     {
         public IServiceCollection RegisterModule(IServiceCollection services)
         {
             Console.WriteLine("Adding Quartz");
 
-            // Add Quartz services
-            services.AddSingleton<IJobFactory, SingletonJobFactory>();
-            services.AddSingleton<ISchedulerFactory, StdSchedulerFactory>();
-
-            //Add the main runner
-            services.AddSingleton<QuartzJobRunner>();
-
-
-            //Loop through all the Jobs and get a list of them to add as singltons to the service collection
+            //Loop through all the Jobs, building a list and then call their static AddJob method
             var type = typeof(WorkerJob);
             var types = AppDomain.CurrentDomain.GetAssemblies()
                 .SelectMany(s => s.GetTypes())
                 .Where(p => type.IsAssignableFrom(p) && !p.IsInterface);
-
             foreach (var job in types)
             {
-                //Get the job's cron expression via reflection
-                string cronExpression = (string) job.GetMethod("GetCronExpression").Invoke(null, null);
-
-                services.AddSingleton(job);
-                services.AddSingleton(new JobSchedule(
-                    jobType: job,
-                    cronExpression: cronExpression));
+                //Get the job's AddJob method via reflection
+                job.GetMethod("AddJob").Invoke( null, [services]);                    
             }
-
-            //Add Quartz
-            services.AddSingleton<QuartzService>();
-            services.AddHostedService(s => s.GetRequiredService<QuartzService>());
-
+            
+            services.AddQuartzHostedService(options =>
+            {
+                // when shutting down we want jobs to complete gracefully
+                options.WaitForJobsToComplete = true;
+            });
             return services;
         }
     }
 }
+	
