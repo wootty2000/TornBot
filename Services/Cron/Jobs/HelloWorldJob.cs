@@ -1,5 +1,4 @@
-﻿//
-// TornBot
+﻿// TornBot
 //
 // Copyright (C) 2024 TornBot.com
 // 
@@ -17,31 +16,42 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
-using TornBot.Services.Cron.Infrastructure;
 
-namespace TornBot.Services.Cron.Jobs
+namespace TornBot.Services.Cron.Infrastructure;
+
+public class HelloWorldJob : WorkerJob
 {
-    public class HelloWorldJob : WorkerJob
+    private readonly ILogger<HelloWorldJob> _logger;
+    private static string _cronExpression = "0/5 * * * * ? *";
+    
+    public static void AddJob(IServiceCollection services)
     {
-        private readonly ILogger<HelloWorldJob> _logger;
-
-        public static string GetCronExpression()
+        services.AddQuartz(conf =>
         {
-            return "*/5 * * * * ? *";
-        }
-
-        public HelloWorldJob(ILogger<HelloWorldJob> logger)
-        {
-            _logger = logger;
-        }
-
-        public Task Execute(IJobExecutionContext context)
-        {
-            //_logger.LogInformation("Hello world!");
-            return Task.CompletedTask;
-        }
+            JobKey jobKey = new JobKey("HelloWorldJob-Job", "Cron");
+            conf.AddJob<HelloWorldJob>(j => j.WithIdentity(jobKey));
+            conf.AddTrigger(trigger => trigger
+                .WithIdentity("HelloWorldJob-Trigger", "Cron")
+                .ForJob(jobKey)
+                .WithCronSchedule(_cronExpression));
+        });
+        services.AddTransient<HelloWorldJob>();
     }
-
+    
+    public HelloWorldJob(ILogger<HelloWorldJob> logger)
+    {
+        _logger = logger;
+    }
+    
+    public void Dispose() { } // No specific cleanup required here (optional)
+    
+    public Task Execute(IJobExecutionContext context)
+    {
+        //_logger.LogInformation("HelloWorldJob running");
+        
+        return Task.CompletedTask;
+    }
 }
