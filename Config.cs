@@ -72,7 +72,10 @@ namespace TornBot
         [JsonProperty("StocksChannelId")]
         internal string StocksChannelId = "Channel ID";
 
-      
+        [JsonProperty("InactivePlayerChannelId")]
+        internal string InactivePlayerChannelId = "Channel ID";
+
+
         /// <summary>
         /// Loads config from a JSON file.
         /// </summary>
@@ -116,6 +119,33 @@ namespace TornBot
 
                 //Die
                 Environment.Exit(0);
+            }else
+            {
+                string[] lines = File.ReadAllLines("config.json");
+
+                int numberOfLines = lines.Length - 2;
+
+                int numberOfInternalStrings = 0;
+                System.Type configType = typeof(Config);
+                var fields = configType.GetFields(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                foreach (var field in fields)
+                {
+                    if (field.FieldType == typeof(string))
+                    {
+                        numberOfInternalStrings++;
+                    }
+                }
+
+                if (numberOfLines != numberOfInternalStrings)
+                {
+                    Console.ForegroundColor = ConsoleColor.Black;
+                    Console.BackgroundColor = ConsoleColor.Yellow;
+                    WriteCenter("WARNING", 1);
+                    Console.ResetColor();
+                    WriteCenter("Number of lines does not match number of internal strings. Please update config.json", 1);
+                    Console.WriteLine();
+                }
+
             }
 
             var config = new ConfigurationBuilder()
