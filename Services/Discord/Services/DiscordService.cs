@@ -114,6 +114,9 @@ namespace TornBot.Services.Discord.Services
         {
             return _config.GetValue<string>("StocksChannelId");
         }
-
+        public string GetInactivePlayerChannelId()
+        {
+            return _config.GetValue<string>("InactivePlayerChannelId");
+        }
     }
 }

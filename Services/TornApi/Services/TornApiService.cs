@@ -56,6 +56,13 @@ namespace TornBot.Services.TornApi.Services
             return GetPlayer(id, key);
         }
 
+        public TornApi.Entities.Faction? GetFaction(UInt32 id)
+        {
+            string key = tornApiKeys.GetNextKey();
+
+            return GetFaction(id, key);
+        }
+
         public TornBot.Entities.TornPlayer? GetPlayer(UInt32 id, string apiKey)
         {
             string url = String.Format("user/{0}?key={1}", id.ToString(), apiKey);
@@ -89,6 +96,20 @@ namespace TornBot.Services.TornApi.Services
             TornApi.Entities.StockResponse stocks = JsonSerializer.Deserialize<TornApi.Entities.StockResponse>(apiResponse);
 
             return stocks;
+        }
+        public TornApi.Entities.Faction GetFaction(UInt32 id, string key)
+        {
+            string url = String.Format("faction/{0}?selections=&key={1}", id.ToString(), key);
+            string apiResponse = MakeApiRequest(url);
+            bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
+
+            if (responseHandled)
+            {
+                return null;
+            }
+            TornApi.Entities.Faction faction = JsonSerializer.Deserialize<TornApi.Entities.Faction>(apiResponse);
+
+            return faction;
         }
     }
 }
