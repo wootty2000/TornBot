@@ -86,7 +86,7 @@ namespace TornBot.Services.Cron.Jobs
             foreach (var member in Faction.FactionMember)
             {
 
-                if (member.Value.Status.State != "Fallen")
+                if (member.Value.Status.state != "Fallen")
                 {
                     long lastActionTimestamp = (long)member.Value.LastAction.Timestamp;
 

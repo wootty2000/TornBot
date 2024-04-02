@@ -19,10 +19,10 @@ namespace TornBot.Services.TornApi.Entities
         public UInt16 DaysInFaction { get; set; }
 
         [JsonPropertyName("last_action")]
-        public FactionMemberLastAction LastAction { get; set; }
+        public UserLastAction LastAction { get; set; }
 
         [JsonPropertyName("status")]
-        public FactionMemberStatus Status { get; set; }
+        public UserStatus Status { get; set; }
 
         [JsonPropertyName("position")]
         public string Position { get; set; }
