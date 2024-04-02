@@ -88,7 +88,7 @@ namespace TornBot.Services.Cron.Jobs
 
                 if (member.Value.Status.State != "Fallen")
                 {
-                    long lastActionTimestamp = member.Value.LastAction.Timestamp;
+                    long lastActionTimestamp = (long)member.Value.LastAction.Timestamp;
 
                     double timeDifference = currentTimestamp - lastActionTimestamp;
 

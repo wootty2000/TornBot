@@ -10,7 +10,7 @@ namespace TornBot.Services.TornApi.Entities
     public class Faction
     {
         [JsonPropertyName("ID")]
-        public int Id { get; set; }
+        public UInt32 Id { get; set; }
 
         [JsonPropertyName("name")]
         public string Name { get; set; }
@@ -22,22 +22,22 @@ namespace TornBot.Services.TornApi.Entities
         public string TagImage { get; set; }
 
         [JsonPropertyName("leader")]
-        public int Leader { get; set; }
+        public UInt32 Leader { get; set; }
 
         [JsonPropertyName("co-leader")]
-        public int CoLeader { get; set; }
+        public UInt32 CoLeader { get; set; }
 
         [JsonPropertyName("respect")]
-        public int Respect { get; set; }
+        public UInt64 Respect { get; set; }
 
         [JsonPropertyName("age")]
-        public int Age { get; set; }
+        public UInt16 Age { get; set; }
 
         [JsonPropertyName("capacity")]
-        public int Capacity { get; set; }
+        public UInt16 Capacity { get; set; }
 
         [JsonPropertyName("best_chain")]
-        public int BestChain { get; set; }
+        public UInt32 BestChain { get; set; }
         /*  to do
         [JsonPropertyName("ranked_wars")]
         public Dictionary<string, object> RankedWars { get; set; }

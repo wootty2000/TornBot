@@ -13,10 +13,10 @@ namespace TornBot.Services.TornApi.Entities
         public string Name { get; set; }
 
         [JsonPropertyName("level")]
-        public int Level { get; set; }
+        public UInt32 Level { get; set; }
 
         [JsonPropertyName("days_in_faction")]
-        public int DaysInFaction { get; set; }
+        public UInt16 DaysInFaction { get; set; }
 
         [JsonPropertyName("last_action")]
         public FactionMemberLastAction LastAction { get; set; }

@@ -22,6 +22,6 @@ namespace TornBot.Services.TornApi.Entities
         public string Color { get; set; }
 
         [JsonPropertyName("until")]
-        public int Until { get; set; }
+        public UInt32 Until { get; set; }
     }
 }

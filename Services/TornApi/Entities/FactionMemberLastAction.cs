@@ -13,7 +13,7 @@ namespace TornBot.Services.TornApi.Entities
         public string Status { get; set; }
 
         [JsonPropertyName("timestamp")]
-        public long Timestamp { get; set; }
+        public UInt32 Timestamp { get; set; }
 
         [JsonPropertyName("relative")]
         public string Relative { get; set; }

@@ -10,18 +10,18 @@ namespace TornBot.Services.TornApi.Entities
     public class FactionRank
     {
         [JsonPropertyName("level")]
-        public int Level { get; set; }
+        public UInt16 Level { get; set; }
 
         [JsonPropertyName("name")]
         public string Name { get; set; }
 
         [JsonPropertyName("division")]
-        public int Division { get; set; }
+        public UInt16 Division { get; set; }
 
         [JsonPropertyName("position")]
-        public int Position { get; set; }
+        public UInt16 Position { get; set; }
 
         [JsonPropertyName("wins")]
-        public int Wins { get; set; }
+        public UInt16 Wins { get; set; }
     }
 }
