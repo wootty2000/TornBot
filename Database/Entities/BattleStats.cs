@@ -26,7 +26,7 @@ using System.Threading.Tasks;
 
 namespace TornBot.Database.Entities
 {
-    public class Stats
+    public class BattleStats
     {
         public UInt32 Id { get; set; }
         public UInt32 PlayerId { get; set; }
@@ -47,41 +47,41 @@ namespace TornBot.Database.Entities
 
         public DateTime Timestamp { get; set; }
 
-        public Stats() { }
+        public BattleStats() { }
 
-        public Stats(TornBot.Entities.Stats stats)
+        public BattleStats(TornBot.Entities.BattleStats battleStats)
         {
-            PlayerId = stats.PlayerId;
-            Strength = stats.Strength;
-            StrengthTimestamp = stats.StrengthTimestamp;
-            Defense = stats.Defense;
-            DefenseTimestamp = stats.DefenseTimestamp;
-            Speed = stats.Speed;
-            SpeedTimestamp = stats.SpeedTimestamp;
-            Dexterity = stats.Dexterity;
-            DexterityTimestamp = stats.DexterityTimestamp;
-            Total = stats.Total;
-            TotalTimestamp = stats.TotalTimestamp;
-            Timestamp = stats.StatsTimestamp;
+            PlayerId = battleStats.PlayerId;
+            Strength = battleStats.Strength;
+            StrengthTimestamp = battleStats.StrengthTimestamp;
+            Defense = battleStats.Defense;
+            DefenseTimestamp = battleStats.DefenseTimestamp;
+            Speed = battleStats.Speed;
+            SpeedTimestamp = battleStats.SpeedTimestamp;
+            Dexterity = battleStats.Dexterity;
+            DexterityTimestamp = battleStats.DexterityTimestamp;
+            Total = battleStats.Total;
+            TotalTimestamp = battleStats.TotalTimestamp;
+            Timestamp = battleStats.BattleStatsTimestamp;
         }
 
-        public TornBot.Entities.Stats ToStats()
+        public TornBot.Entities.BattleStats ToBattleStats()
         {
-            TornBot.Entities.Stats stats = new TornBot.Entities.Stats();
-            stats.PlayerId = PlayerId;
-            stats.Strength = Strength;
-            stats.StrengthTimestamp = StrengthTimestamp;
-            stats.Defense = Defense;
-            stats.DefenseTimestamp = DefenseTimestamp;
-            stats.Speed = Speed;
-            stats.SpeedTimestamp = SpeedTimestamp;
-            stats.Dexterity = Dexterity;
-            stats.DexterityTimestamp = DexterityTimestamp;
-            stats.Total = Total;
-            stats.TotalTimestamp = TotalTimestamp;
-            stats.StatsTimestamp = Timestamp;
+            TornBot.Entities.BattleStats battleStats = new TornBot.Entities.BattleStats();
+            battleStats.PlayerId = PlayerId;
+            battleStats.Strength = Strength;
+            battleStats.StrengthTimestamp = StrengthTimestamp;
+            battleStats.Defense = Defense;
+            battleStats.DefenseTimestamp = DefenseTimestamp;
+            battleStats.Speed = Speed;
+            battleStats.SpeedTimestamp = SpeedTimestamp;
+            battleStats.Dexterity = Dexterity;
+            battleStats.DexterityTimestamp = DexterityTimestamp;
+            battleStats.Total = Total;
+            battleStats.TotalTimestamp = TotalTimestamp;
+            battleStats.BattleStatsTimestamp = Timestamp;
 
-            return stats;
+            return battleStats;
         }
 
     }

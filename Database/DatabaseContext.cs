@@ -12,7 +12,7 @@ namespace TornBot.Database
     {
         public DbSet<Settings> Settings { get; set; }
         public DbSet<TornPlayer> TornPlayers { get; set; }
-        public DbSet<Stats> Stats { get; set; }
+        public DbSet<BattleStats> BattleStats { get; set; }
 
         public DatabaseContext(DbContextOptions<DatabaseContext> options)
             : base(options)
@@ -28,30 +28,8 @@ namespace TornBot.Database
                 config.GetValue<string>("DbPass"),
                 config.GetValue<string>("DbDatabase")
             );
-
-            var provider = "Sqlite";
-
-            var folder = Environment.SpecialFolder.LocalApplicationData;
-            var path = Environment.GetFolderPath(folder);
-            String DbPath = System.IO.Path.Join(path, "tornbot.db");
-
+            
             services.AddDbContext<DatabaseContext>(options => options.UseMySQL(connectionString), ServiceLifetime.Transient);
-            //services.AddDbContext<DatabaseContext>(options => options.UseSqlite($"Data Source={DbPath}"));
-
-            /*services.AddDbContext<DatabaseContext>(
-                options => _ = provider switch
-                {
-                    "Sqlite" => options.UseSqlite(
-                        $"Data Source={DbPath}",
-                        x => x.MigrationsAssembly("SqliteMigrations")),
-
-                    "MySql" => options.UseMySQL(
-                        connectionString,
-                        x => x.MigrationsAssembly("SqlServerMigrations")),
-
-                    _ => throw new Exception($"Unsupported provider: {provider}")
-                });
-            */
         }
     }
 }

@@ -115,10 +115,10 @@ namespace TornBot.Services.Players.Service
                     {
                         //The local cache name doesnt match the return from Torn. 
                         //We can use TornStats spy lookup on a name
-                        Entities.Stats tsStats = GetStats(name, true);
-                        if (tsStats != null)
+                        Entities.BattleStats tsBattleStats = GetBattleStats(name, true);
+                        if (tsBattleStats != null)
                         {
-                            return GetPlayer(tsStats.PlayerId, true);
+                            return GetPlayer(tsBattleStats.PlayerId, true);
                         }
                         else
                         {
@@ -133,10 +133,10 @@ namespace TornBot.Services.Players.Service
             }
             else
             {
-                Entities.Stats stats = GetStats(name, true);
-                if (stats != null)
+                Entities.BattleStats battleStats = GetBattleStats(name, true);
+                if (battleStats != null)
                 {
-                    UInt32 id = stats.PlayerId;
+                    UInt32 id = battleStats.PlayerId;
                     
                     tornPlayer = _torn.GetPlayer(id);
                     if (tornPlayer != null)
@@ -156,17 +156,17 @@ namespace TornBot.Services.Players.Service
             }
         }
 
-        public Entities.Stats? GetStats(string IdOrName, bool checkUpdate = false)
+        public Entities.BattleStats? GetBattleStats(string IdOrName, bool checkUpdate = false)
         {
             UInt32 idUInt;
-            Database.Entities.Stats? dbStats = null;
+            Database.Entities.BattleStats? dbBattleStats = null;
             
             //If we have checkUpdate we want to skip this so that we try to get something from TornStats
             if (!checkUpdate)
             {
                 if (UInt32.TryParse(IdOrName, out idUInt))
                 {
-                    dbStats = _database.Stats.Where(s => s.PlayerId == idUInt).FirstOrDefault();
+                    dbBattleStats = _database.BattleStats.Where(s => s.PlayerId == idUInt).FirstOrDefault();
                 }
                 else
                 {
@@ -174,11 +174,11 @@ namespace TornBot.Services.Players.Service
                         _database.TornPlayers.Where(s => s.Name == IdOrName).FirstOrDefault();
                     if (dbPlayer != null)
                     {
-                        dbStats = _database.Stats.Where(s => s.PlayerId == dbPlayer.Id).FirstOrDefault();
+                        dbBattleStats = _database.BattleStats.Where(s => s.PlayerId == dbPlayer.Id).FirstOrDefault();
                     }
                     else
                     {
-                        dbStats = null;
+                        dbBattleStats = null;
                     }
 
                 }
@@ -189,30 +189,30 @@ namespace TornBot.Services.Players.Service
             // 2) the stats are less than 2 weeks old
             // 3) we are not asked to check for an external update
             if (
-                dbStats != null &&
-                dbStats.Timestamp.CompareTo(DateTime.UtcNow.AddDays(-MaxStatsCacheAge)) < 0 &&
+                dbBattleStats != null &&
+                dbBattleStats.Timestamp.CompareTo(DateTime.UtcNow.AddDays(-MaxStatsCacheAge)) < 0 &&
                 !checkUpdate
             )
             {
                 // All is good, we can return what we have;
-                return dbStats.ToStats();
+                return dbBattleStats.ToBattleStats();
             }
             else
             {
                 // We need to figure out what, if anything, we can send back
-                //Lets try and get some stats from TornStats
-                Entities.Stats tsStats = _tornStats.GetPlayerStats(IdOrName);
+                //Lets try and get some battleStats from TornStats
+                Entities.BattleStats tsBattleStats = _tornStats.GetPlayerStats(IdOrName);
 
                 //If we have nothing, end game
-                if(dbStats == null && tsStats == null)
+                if(dbBattleStats == null && tsBattleStats == null)
                 {
                     //We have nothing, so hand back null
                     return null;
                 }
-                else if (tsStats == null)
+                else if (tsBattleStats == null)
                 {
                     //We have something from the database and but nothing else
-                    return dbStats.ToStats();
+                    return dbBattleStats.ToBattleStats();
                 }
                 else
                 {
@@ -221,19 +221,19 @@ namespace TornBot.Services.Players.Service
 
                     //If we dont have anything in the database OR
                     //TS stat is newer than what we have
-                    if (dbStats == null || tsStats.StatsTimestamp.CompareTo(dbStats.Timestamp) > 0)
+                    if (dbBattleStats == null || tsBattleStats.BattleStatsTimestamp.CompareTo(dbBattleStats.Timestamp) > 0)
                     {
                         //TS is newer (or local one doesnt exist)
-                        Database.Entities.Stats newDbStats = new Database.Entities.Stats(tsStats);
-                        _database.Stats.Add(newDbStats);
+                        Database.Entities.BattleStats newDbBattleStats = new Database.Entities.BattleStats(tsBattleStats);
+                        _database.BattleStats.Add(newDbBattleStats);
                         _database.SaveChanges();
 
-                        return tsStats;
+                        return tsBattleStats;
                     }
                     else
                     {
                         // Return what was in the database. Its either newer or same age as TS
-                        return dbStats.ToStats();
+                        return dbBattleStats.ToBattleStats();
                     }
                 }
             }
