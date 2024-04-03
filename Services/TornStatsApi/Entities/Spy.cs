@@ -34,30 +34,30 @@ namespace TornBot.Services.TornStatsApi.Entities
         [JsonPropertyName("spy")]
         public SpySpy spy { get; set; }
 
-        public TornBot.Entities.Stats ToStats()
+        public TornBot.Entities.BattleStats ToBattleStats()
         {
-            TornBot.Entities.Stats stats = new TornBot.Entities.Stats();
+            TornBot.Entities.BattleStats battleStats = new TornBot.Entities.BattleStats();
 
-            stats.PlayerId = UInt32.Parse(this.spy.PlayerId.ToString());
+            battleStats.PlayerId = UInt32.Parse(this.spy.PlayerId.ToString());
 
-            stats.Strength = this.spy.Strength;
-            stats.StrengthTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.StrengthTimestamp);
+            battleStats.Strength = this.spy.Strength;
+            battleStats.StrengthTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.StrengthTimestamp);
 
-            stats.Defense = this.spy.Defense;
-            stats.DefenseTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.DefenseTimestamp);
+            battleStats.Defense = this.spy.Defense;
+            battleStats.DefenseTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.DefenseTimestamp);
 
-            stats.Speed = this.spy.Speed;
-            stats.SpeedTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.SpeedTimestamp);
+            battleStats.Speed = this.spy.Speed;
+            battleStats.SpeedTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.SpeedTimestamp);
 
-            stats.Dexterity = this.spy.Dexterity;
-            stats.DexterityTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.DexterityTimestamp);
+            battleStats.Dexterity = this.spy.Dexterity;
+            battleStats.DexterityTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.DexterityTimestamp);
 
-            stats.Total = this.spy.Total;
-            stats.TotalTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.TotalTimestamp);
+            battleStats.Total = this.spy.Total;
+            battleStats.TotalTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.TotalTimestamp);
 
-            stats.StatsTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.Timestamp);
+            battleStats.BattleStatsTimestamp = DateTime.UnixEpoch.AddSeconds(this.spy.Timestamp);
 
-            return stats;
+            return battleStats;
         }
 
     }

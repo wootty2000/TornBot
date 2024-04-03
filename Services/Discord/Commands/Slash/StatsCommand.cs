@@ -46,16 +46,16 @@ namespace TornBot.Services.Discord.Commands.Slash
             //id = id.Replace(" ", ""); //this is to make sure there is no space before id/name
             id = id.Trim();
 
-            Entities.Stats stats = _players.GetStats(id);
+            Entities.BattleStats battleStats = _players.GetBattleStats(id);
 
 
-            if (stats == null)
+            if (battleStats == null)
             {
                 ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats from TornStats"));
                 return;
             }
 
-            Entities.TornPlayer player = _players.GetPlayer(stats.PlayerId);
+            Entities.TornPlayer player = _players.GetPlayer(battleStats.PlayerId);
 
             if (player == null)
             {
@@ -69,14 +69,14 @@ namespace TornBot.Services.Discord.Commands.Slash
             embed.Title = String.Format("{0} [{1}]", player.Name, player.Id);
             embed.Description = "Lvl: " + player.Level + "\n" + "Faction: " + player.Faction.Name;
 
-            embed.AddField("Stats:",
-                "Strength: " + stats.Strength.ToString("N0", CultureInfo.InvariantCulture) + "\n" +
-                "Speed: " + stats.Speed.ToString("N0", CultureInfo.InvariantCulture) + "\n" +
-                "Defense: " + stats.Defense.ToString("N0", CultureInfo.InvariantCulture) + "\n" +
-                "Dexterity: " + stats.Dexterity.ToString("N0", CultureInfo.InvariantCulture) + "\n" +
-                "Total: " + stats.Total.ToString("N0", CultureInfo.InvariantCulture) + "\n" +
+            embed.AddField("Battle Stats:",
+                "Strength: " + battleStats.Strength.ToString("N0", CultureInfo.InvariantCulture) + "\n" +
+                "Speed: " + battleStats.Speed.ToString("N0", CultureInfo.InvariantCulture) + "\n" +
+                "Defense: " + battleStats.Defense.ToString("N0", CultureInfo.InvariantCulture) + "\n" +
+                "Dexterity: " + battleStats.Dexterity.ToString("N0", CultureInfo.InvariantCulture) + "\n" +
+                "Total: " + battleStats.Total.ToString("N0", CultureInfo.InvariantCulture) + "\n" +
                 $"[Profile](https://www.torn.com/profiles.php?XID={0})     [Attack](https://www.torn.com/loader.php?sid=attack&user2ID={0})")//between -> "" is "non-breaking space"
-             .WithFooter(stats.StatsTimestamp.ToString("yyyy-MM-dd HH:mm"));
+             .WithFooter(battleStats.BattleStatsTimestamp.ToString("yyyy-MM-dd HH:mm"));
 
 
             await ctx.EditResponseAsync(new DiscordWebhookBuilder().AddEmbed(embed.Build()));

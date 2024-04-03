@@ -60,14 +60,14 @@ namespace TornBot.Services.TornStatsApi.Services
             }
         }
 
-        public TornBot.Entities.Stats GetPlayerStats(string playerIdOrName)
+        public TornBot.Entities.BattleStats GetPlayerStats(string playerIdOrName)
         {
             string key = _tornStatsApiKeys.GetNextKey();
 
             return GetPlayerStats(playerIdOrName, key);
         }
 
-        public TornBot.Entities.Stats GetPlayerStats(string playerIdOrName, string apiKey)
+        public TornBot.Entities.BattleStats GetPlayerStats(string playerIdOrName, string apiKey)
         {
             string url = String.Format("v2/{0}/spy/user/{1}", apiKey, playerIdOrName);
             string apiResponse = MakeApiRequest(url);
@@ -83,9 +83,9 @@ namespace TornBot.Services.TornStatsApi.Services
             {
                 TornStatsApi.Entities.Spy spy = JsonSerializer.Deserialize<TornStatsApi.Entities.Spy>(apiResponse);
 
-                TornBot.Entities.Stats stats = spy.ToStats();
+                TornBot.Entities.BattleStats battleStats = spy.ToBattleStats();
 
-                return stats;
+                return battleStats;
             }
             catch (Exception e)
             {
