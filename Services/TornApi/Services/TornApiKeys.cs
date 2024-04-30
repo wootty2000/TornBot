@@ -33,6 +33,8 @@ namespace TornBot.Services.TornApi.Services
         public string GetNextKey()
         {
             return config.GetValue<string>("TornApiKey");
+            
+            //throw new NoMoreKeysAvailableException
         }
     }
 }

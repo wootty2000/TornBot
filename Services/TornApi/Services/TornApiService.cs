@@ -18,6 +18,7 @@
 //
 
 using System.Text.Json;
+using TornBot.Exceptions;
 
 namespace TornBot.Services.TornApi.Services
 {
@@ -40,41 +41,87 @@ namespace TornBot.Services.TornApi.Services
 
             try
             {
-                return client.GetAsync(url).Result.Content.ReadAsStringAsync().Result;
+                string response = client.GetAsync(url).Result.Content.ReadAsStringAsync().Result;
+
+                JsonElement jsonResponse = JsonSerializer.Deserialize<dynamic>(response);
+                if (jsonResponse.TryGetProperty("error", out JsonElement errorElement))
+                {
+                    if (errorElement.TryGetProperty("code", out JsonElement codeElement) && codeElement.ValueKind == JsonValueKind.Number)
+                    {
+                        switch (codeElement.GetInt16())
+                        {
+                            case 2:
+                                throw new InvalidKeyException();
+                            case 8:
+                                throw new IPBlockedException();
+                            case 9:
+                                throw new ApiNotAvailableException();
+                            default:
+                                throw new UnknownException(String.Format("Torn API Error: {0}", codeElement.GetInt16().ToString()));
+                        }
+                    }
+                }
+                
+                return response;
             }
             catch (Exception e)
             {
                 Console.WriteLine("Error in rest call to Torn: " + e.Message);
-                return null;
+                throw new UnknownException("Error in rest call to Torn", e);
             }
         }
 
         public TornBot.Entities.TornPlayer? GetPlayer(UInt32 id)
         {
-            string key = tornApiKeys.GetNextKey();
+            //Loop until we get a valid response or run out of API keys or a general API failure
+            while (true)
+            {
+                try
+                {
+                    string key = tornApiKeys.GetNextKey();
 
-            return GetPlayer(id, key);
+                    return GetPlayer(id, key);
+                }
+                catch (InvalidKeyException e)
+                {
+                    continue;
+                }
+                catch (Exception e)
+                {
+                    //Redundant but makes it easier to read and understand
+                    throw;
+                }
+            }
         }
 
-        public TornApi.Entities.Faction? GetFaction(UInt32 id)
+        public TornApi.Entities.Faction GetFaction(UInt32 id)
         {
-            string key = tornApiKeys.GetNextKey();
-
-            return GetFaction(id, key);
+            //Loop until we get a valid response or run out of API keys or a general API failure
+            while (true)
+            {
+                try
+                {
+                    string key = tornApiKeys.GetNextKey();
+                    
+                    return GetFaction(id, key);
+                }
+                catch (InvalidKeyException e)
+                {
+                    continue;
+                }
+                catch (Exception e)
+                {
+                    //Redundant but makes it easier to read and understand
+                    throw;
+                }
+            }
         }
 
         public TornBot.Entities.TornPlayer? GetPlayer(UInt32 id, string apiKey)
         {
             string url = String.Format("user/{0}?key={1}", id.ToString(), apiKey);
             string apiResponse = MakeApiRequest(url);
-
-            bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
-
-            if (responseHandled)
-            {
-                return null;
-            }
-
+            
             TornApi.Entities.User user = JsonSerializer.Deserialize<TornApi.Entities.User>(apiResponse);
 
             TornBot.Entities.TornPlayer tornPlayer = user.ToTornPlayer();
@@ -87,12 +134,7 @@ namespace TornBot.Services.TornApi.Services
             string key = tornApiKeys.GetNextKey();
             string url = String.Format("torn/?selections=stocks&key={0}", key);
             string apiResponse = MakeApiRequest(url);
-            bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
 
-            if (responseHandled)
-            {
-                return null;
-            }
             TornApi.Entities.StockResponse stocks = JsonSerializer.Deserialize<TornApi.Entities.StockResponse>(apiResponse);
 
             return stocks;
@@ -101,12 +143,7 @@ namespace TornBot.Services.TornApi.Services
         {
             string url = String.Format("faction/{0}?selections=&key={1}", id.ToString(), key);
             string apiResponse = MakeApiRequest(url);
-            bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
 
-            if (responseHandled)
-            {
-                return null;
-            }
             TornApi.Entities.Faction faction = JsonSerializer.Deserialize<TornApi.Entities.Faction>(apiResponse);
 
             return faction;
