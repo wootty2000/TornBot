@@ -19,6 +19,7 @@
 
 using Microsoft.Extensions.Hosting;
 using TornBot.Database;
+using TornBot.Services.TornApi.Entities;
 using TornBot.Services.TornApi.Services;
 using TornBot.Services.TornStatsApi.Services;
 
@@ -237,6 +238,32 @@ namespace TornBot.Services.Players.Service
                     }
                 }
             }
+        }
+
+        public List<Entities.ReviveStatus> GetReviveStatus(UInt32 factionID, bool forceUpdate = false)
+        {
+            List<Entities.ReviveStatus> reviveStatusList = new List<Entities.ReviveStatus>();
+
+            TornApi.Entities.Faction Faction = _torn.GetFaction(factionID);
+
+            foreach (var member in Faction.FactionMember)
+            {
+                if (member.Value.Status.state != "Fallen")
+                {
+                    UInt32 memberID = member.Key;
+                    Entities.ReviveStatus reviveStatus = _torn.GetReviveStatus(memberID);
+                    
+                    reviveStatus.Player.Faction.Tag_image = Faction.TagImage; 
+                    //The tag image has to be added from the faction as it is not accessible through the user
+
+                    if (reviveStatus.Revivable == 1)
+                    {
+                        reviveStatusList.Add(reviveStatus);
+                    }
+                }
+            }
+            return reviveStatusList;
+
         }
 
         public Task StartAsync(CancellationToken cancellationToken)

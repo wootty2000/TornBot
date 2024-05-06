@@ -17,18 +17,34 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
 namespace TornBot.Entities
 {
-    public class TornFaction
+    public class ReviveStatus
     {
-        private UInt32 id = 0;
-        private string name = "";
-        private string tag_image = "";
+        private UInt16 revivable;
+        private TornPlayer player;
 
-        public UInt32 Id { get { return id; } set { id = value; } }
+        public ReviveStatus()
+        { }
 
-        public string Name { get { return name; } set { name = value; } }
+        public ReviveStatus(UInt16 Revivable, TornPlayer tornPlayer)
+        {
+            this.revivable = Revivable;
+            this.player = tornPlayer;
+        }
 
-        public string Tag_image { get { return tag_image; } set { tag_image = value; } }
+        public UInt16 Revivable
+        { get { return revivable; } set { revivable = value; } }
+
+
+        public TornPlayer Player
+        { get { return player; } set { player = value; } }
     }
 }

@@ -148,5 +148,19 @@ namespace TornBot.Services.TornApi.Services
 
             return faction;
         }
+
+        public TornBot.Entities.ReviveStatus GetReviveStatus(UInt32 id)
+        {
+            //We ideally want to use an external API key so it doesnt return friends/faction
+            string key = tornApiKeys.GetNextKey();
+            string url = String.Format("user/{0}?key={1}", id.ToString(), key);
+            string apiResponse = MakeApiRequest(url);
+
+            TornApi.Entities.User user = JsonSerializer.Deserialize<TornApi.Entities.User>(apiResponse);
+
+            TornBot.Entities.ReviveStatus reviveStatus = user.ToReviveStatus();
+
+            return reviveStatus;
+        }
     }
 }
