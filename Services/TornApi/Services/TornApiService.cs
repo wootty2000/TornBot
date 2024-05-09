@@ -241,5 +241,34 @@ namespace TornBot.Services.TornApi.Services
                 throw new ApiCallFailureException("Error deserializing stocks data", e);
             }
         }
+
+        /// <summary>
+        /// Attempts to get revive status of a player
+        /// </summary>
+        /// <param name="id">Torn Player id</param>
+        /// <returns>TornBot.Entities.ReviveStatus</returns>
+        /// <exception cref="NoMoreKeysAvailableException">No more API keys are available. Either Invalid, Inactive or we are rate limiting key use</exception>
+        /// <exception cref="ApiNotAvailableException">API system is currently unavailable</exception>
+        /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception
+        public TornBot.Entities.ReviveStatus GetReviveStatus(UInt32 id)
+        {
+            //We ideally want to use an external API key so it doesnt return friends/faction
+            string key = tornApiKeys.GetNextKey();
+            string url = String.Format("user/{0}?key={1}", id.ToString(), key);
+            string apiResponse = MakeApiRequest(url);
+
+            try
+            {
+                TornApi.Entities.User user = JsonSerializer.Deserialize<TornApi.Entities.User>(apiResponse);
+                TornBot.Entities.ReviveStatus reviveStatus = user.ToReviveStatus();
+
+                return reviveStatus;
+            }
+            catch (Exception e)
+            {
+                //TODO log this correctly
+                throw new ApiCallFailureException("Error deserializing revive status data", e);
+            }
+        }
     }
 }
