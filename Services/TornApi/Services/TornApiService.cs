@@ -38,9 +38,6 @@ namespace TornBot.Services.TornApi.Services
         /// </summary>
         /// <param name="endpoint">String of the endpoint including all parameters (inc Api Key)</param>
         /// <returns>String - the raw response from the API</returns>
-        /// <exception cref="InvalidKeyException">The supplied key is no longer valid</exception>
-        /// <exception cref="ApiNotAvailableException">API system is currently unavailable</exception>
-        /// <exception cref="ApiKeyOwnerInactiveException">The API Key is currently suspended due to owner inactivity greater than 7 days</exception>
         /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
         private string MakeApiRequest(string endpoint)
         {
@@ -71,14 +68,14 @@ namespace TornBot.Services.TornApi.Services
                 throw new ApiCallFailureException("Error is rest call to Torn", e);
             }    
             
-            //If we got here, there was a an error code from Torn's API. Return the most appropriate exception
+            //If we got here, there was an error code from Torn's API. Return the most appropriate exception
             throw codeElement.GetInt16() switch
             {
-                2 => new InvalidKeyException(),
-                8 => new ApiCallFailureException("IP Blocked Exception", new IPBlockedException()),
-                9 => new ApiNotAvailableException(),
-                13 => new ApiKeyOwnerInactiveException(),
-                _ => new ApiCallFailureException( "Unknown Exception", new UnknownException(String.Format("Torn API Error: {0}", codeElement.GetInt16().ToString())))
+                2 => new ApiCallFailureException("Supplied API key is invalid", new InvalidKeyException()),
+                8 => new ApiCallFailureException("Server IP has been temporarily blocked", new IPBlockedException()),
+                9 => new ApiCallFailureException("Torn API is currently unavailable", new ApiNotAvailableException()),
+                13 => new ApiCallFailureException("Supplied API key has been suspended due to owner inactivity", new ApiKeyOwnerInactiveException()),
+                _ => new ApiCallFailureException("Unknown Torn API Error", new UnknownException(String.Format("Torn API Error: {0}", codeElement.GetInt16().ToString())))
             };
             
         }
@@ -89,8 +86,6 @@ namespace TornBot.Services.TornApi.Services
         /// </summary>
         /// <param name="id">Torn Player id</param>
         /// <returns>TornBot.Entities.TornPlayer object</returns>
-        /// <exception cref="NoMoreKeysAvailableException">No more API keys are available. Either Invalid, Inactive or we are rate limiting key use</exception>
-        /// <exception cref="ApiNotAvailableException">API system is currently unavailable</exception>
         /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
         public TornBot.Entities.TornPlayer GetPlayer(UInt32 id)
         {
@@ -98,27 +93,37 @@ namespace TornBot.Services.TornApi.Services
             while (true)
             {
                 string key;
-                
+
                 try
                 {
                     key = tornApiKeys.GetNextKey();
 
                     return GetPlayer(id, key);
                 }
-                catch (InvalidKeyException)
+                catch (ApiCallFailureException e)
                 {
-                    //TODO mark the key as invalid in the key store
-                    continue;
+                    if (e.InnerException is not null)
+                    {
+                        if (e.InnerException is InvalidKeyException)
+                        {
+                            //TODO mark the key as invalid in the key store
+                            continue;
+                        } 
+                        else if (e.InnerException is ApiKeyOwnerInactiveException)
+                        {
+                            //TODO mark the key as owner inactive in the key store
+                            continue;
+                        }
+                        else
+                        {
+                            throw;
+                        }
+
+                    }
                 }
-                catch (ApiKeyOwnerInactiveException)
+                catch (Exception e)
                 {
-                    //TODO mark the key as owner inactive in the key store
-                    continue;
-                }
-                catch (Exception)
-                {
-                    //Redundant but makes it easier to read and understand
-                    throw;
+                    throw new ApiCallFailureException("Error in Torn API GetPlayer(UInt32 id)", e);
                 }
             }
         }
@@ -129,25 +134,28 @@ namespace TornBot.Services.TornApi.Services
         /// <param name="id">Torn Player id</param>
         /// <param name="apiKey">Api Key to use</param>
         /// <returns>TornBot.Entities.TornPlayer object of the player</returns>
-        /// <exception cref="NoMoreKeysAvailableException">No more API keys are available. Either Invalid, Inactive or we are rate limiting key use</exception>
-        /// <exception cref="ApiNotAvailableException">API system is currently unavailable</exception>
         /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
         public TornBot.Entities.TornPlayer GetPlayer(UInt32 id, string apiKey)
         {
             string url = String.Format("user/{0}?key={1}", id.ToString(), apiKey);
-            string apiResponse = MakeApiRequest(url);
 
             try
             {
+                string apiResponse = MakeApiRequest(url);
+
                 TornApi.Entities.User user = JsonSerializer.Deserialize<TornApi.Entities.User>(apiResponse);
                 TornBot.Entities.TornPlayer tornPlayer = user.ToTornPlayer();
-            
+
                 return tornPlayer;
+            }
+            catch (ApiCallFailureException)
+            {
+                throw;
             }
             catch (Exception e)
             {
                 //TODO log this correctly
-                throw new ApiCallFailureException("Error deserializing torn player data", e);
+                throw new ApiCallFailureException("Error deserializing Torn player data", e);
             }
         }
 
@@ -157,8 +165,6 @@ namespace TornBot.Services.TornApi.Services
         /// </summary>
         /// <param name="id">Torn Faction id</param>
         /// <returns>TornApi.Entities.Faction object of the faction</returns>
-        /// <exception cref="NoMoreKeysAvailableException">No more API keys are available. Either Invalid, Inactive or we are rate limiting key use</exception>
-        /// <exception cref="ApiNotAvailableException">API system is currently unavailable</exception>
         /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
         public TornApi.Entities.Faction GetFaction(UInt32 id)
         {
@@ -173,20 +179,30 @@ namespace TornBot.Services.TornApi.Services
                     
                     return GetFaction(id, key);
                 }
-                catch (InvalidKeyException)
+                catch (ApiCallFailureException e)
                 {
-                    //TODO mark the key as invalid in the key store
-                    continue;
+                    if (e.InnerException is not null)
+                    {
+                        if (e.InnerException is InvalidKeyException)
+                        {
+                            //TODO mark the key as invalid in the key store
+                            continue;
+                        } 
+                        else if (e.InnerException is ApiKeyOwnerInactiveException)
+                        {
+                            //TODO mark the key as owner inactive in the key store
+                            continue;
+                        }
+                        else
+                        {
+                            throw;
+                        }
+
+                    }
                 }
-                catch (ApiKeyOwnerInactiveException)
+                catch (Exception e)
                 {
-                    //TODO mark the key as owner inactive in the key store
-                    continue;
-                }
-                catch (Exception)
-                {
-                    //Redundant but makes it easier to read and understand
-                    throw;
+                    throw new ApiCallFailureException("Error in Torn API GetPlayer(UInt32 id)", e);
                 }
             }
         }
@@ -197,23 +213,26 @@ namespace TornBot.Services.TornApi.Services
         /// <param name="id">Torn Player id</param>
         /// <param name="apiKey">Api Key to use</param>
         /// <returns>TornApi.Entities.Faction object of the faction</returns>
-        /// <exception cref="NoMoreKeysAvailableException">No more API keys are available. Either Invalid, Inactive or we are rate limiting key use</exception>
-        /// <exception cref="ApiNotAvailableException">API system is currently unavailable</exception>
         /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
         public TornApi.Entities.Faction GetFaction(UInt32 id, string key)
         {
             string url = String.Format("faction/{0}?selections=&key={1}", id.ToString(), key);
-            string apiResponse = MakeApiRequest(url);
 
             try
-            {
+            {    
+                string apiResponse = MakeApiRequest(url);
+
                 TornApi.Entities.Faction faction = JsonSerializer.Deserialize<TornApi.Entities.Faction>(apiResponse);
                 return faction;
+            }
+            catch (ApiCallFailureException)
+            {
+                throw;
             }
             catch (Exception e)
             {
                 //TODO log this correctly
-                throw new ApiCallFailureException("Error deserializing torn faction data", e);
+                throw new ApiCallFailureException("Error deserializing torn player data", e);
             }
         }
 
@@ -221,24 +240,73 @@ namespace TornBot.Services.TornApi.Services
         /// Attempts to get Stock data
         /// </summary>
         /// <returns>TornApi.Entities.StockResponse</returns>
-        /// <exception cref="NoMoreKeysAvailableException">No more API keys are available. Either Invalid, Inactive or we are rate limiting key use</exception>
-        /// <exception cref="ApiNotAvailableException">API system is currently unavailable</exception>
         /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
         public TornApi.Entities.StockResponse GetStocks()
         {
-            string key = tornApiKeys.GetNextKey();
-            string url = String.Format("torn/?selections=stocks&key={0}", key);
-            string apiResponse = MakeApiRequest(url);
+            //Loop until we get a valid response or run out of API keys or a other API call failure
+            while (true)
+            {
+                string key;
+                
+                try
+                {
+                    key = tornApiKeys.GetNextKey();
+                    
+                    return GetStocks(key);
+                }
+                catch (ApiCallFailureException e)
+                {
+                    if (e.InnerException is not null)
+                    {
+                        if (e.InnerException is InvalidKeyException)
+                        {
+                            //TODO mark the key as invalid in the key store
+                            continue;
+                        } 
+                        else if (e.InnerException is ApiKeyOwnerInactiveException)
+                        {
+                            //TODO mark the key as owner inactive in the key store
+                            continue;
+                        }
+                        else
+                        {
+                            throw;
+                        }
+
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new ApiCallFailureException("Error in Torn API GetPlayer(UInt32 id)", e);
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Attempts to get Stock data
+        /// </summary>
+        /// <param name="apiKey">Api Key to use</param>
+        /// <returns>TornApi.Entities.StockResponse</returns>
+        /// <exception cref="ApiCallFailureException"></exception>
+        public TornApi.Entities.StockResponse GetStocks(string apiKey)
+        {
+            string url = String.Format("torn/?selections=stocks&key={0}", apiKey);
 
             try
-            {
+            {        
+                string apiResponse = MakeApiRequest(url);
+
                 TornApi.Entities.StockResponse stocks = JsonSerializer.Deserialize<TornApi.Entities.StockResponse>(apiResponse);
                 return stocks;
+            }
+            catch (ApiCallFailureException)
+            {
+                throw;
             }
             catch (Exception e)
             {
                 //TODO log this correctly
-                throw new ApiCallFailureException("Error deserializing stocks data", e);
+                throw new ApiCallFailureException("Error deserializing torn player data", e);
             }
         }
 

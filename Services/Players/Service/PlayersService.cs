@@ -19,7 +19,7 @@
 
 using Microsoft.Extensions.Hosting;
 using TornBot.Database;
-using TornBot.Services.TornApi.Entities;
+using TornBot.Exceptions;
 using TornBot.Services.TornApi.Services;
 using TornBot.Services.TornStatsApi.Services;
 
@@ -44,11 +44,18 @@ namespace TornBot.Services.Players.Service
             _torn = torn;
             _tornStats = tornStats;
         }
-
         
-        public Entities.TornPlayer? GetPlayer(UInt32 id, bool forceUpdate = false)
+        /// <summary>
+        /// Attempts to find a Torn Player by id
+        /// Will check the DB first, if its stale, will call Torn API to update the DB
+        /// </summary>
+        /// <param name="name">Torn Player name</param>
+        /// <param name="forceUpdate">Force an update from Torn API. always consider the DB record to be stale</param>
+        /// <returns>Entities.TornPlayer</returns>
+        /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
+        public Entities.TornPlayer GetPlayer(UInt32 id, bool forceUpdate = false)
         {
-            Entities.TornPlayer? tornPlayer;
+            Entities.TornPlayer tornPlayer;
 
             // Lets try and get a record from the database. If there is no record, we get given a null
             Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Id == id).FirstOrDefault();
@@ -56,32 +63,42 @@ namespace TornBot.Services.Players.Service
             // Check what we got from the database
             if (dbPlayer == null)
             {
-                // There was no record in the database. Fetch from Torn API and add to the database
-                tornPlayer = _torn.GetPlayer(id);
-                if (tornPlayer != null)
+                //There was no record in the database. Fetch from Torn API and add to the database
+                try
                 {
+                    tornPlayer = _torn.GetPlayer(id);
+
                     _database.TornPlayers.Add(new Database.Entities.TornPlayer(tornPlayer));
                     _database.SaveChanges();
 
                     return tornPlayer;
                 }
-                else
-                    return null;
+                catch (Exception e)
+                {
+                    //Redundant but makes reading the code easier
+                    //Pass any exceptions up the chain
+                    throw;
+                }
+                
             }
             else if (dbPlayer.LastUpdated.CompareTo(DateTime.UtcNow.AddDays(-MaxTornPlayerCacheAge)) < 0 || forceUpdate)
             {
                 // We have a record in the database, but it's stale so we need to update with a fresh pull
-                // Or, we were told to idOrName get a fresh copy
-                tornPlayer = _torn.GetPlayer(id);
-                if(tornPlayer != null)
+                // Or, we were told to get a fresh copy
+                try
                 {
+                    tornPlayer = _torn.GetPlayer(id);
+                    
                     _database.TornPlayers.Update(new Database.Entities.TornPlayer(dbPlayer.Id, tornPlayer));
                     _database.SaveChanges();
 
                     return tornPlayer;
                 }
-                else
+                catch (Exception e)
+                {
+                    //Something went wrong in getting the API data. Just return the existing data instead
                     return dbPlayer.ToTornPlayer();
+                }
             }
             else
             {
@@ -89,11 +106,20 @@ namespace TornBot.Services.Players.Service
                 return dbPlayer.ToTornPlayer();
             }
         }
-        
 
+        /// <summary>
+        /// Attempts to find a Torn Player by name
+        /// Will check the DB first, if its stale, will call Torn API to update the DB
+        /// If no record is found, will try calling TornStats GetBattleStats(name) and try to get a player id
+        /// </summary>
+        /// <param name="name">Torn Player name</param>
+        /// <param name="forceUpdate">Force an update from Torn API. always consider the DB record to be stale</param>
+        /// <returns>Entities.TornPlayer</returns>
+        /// <exception cref="PlayerNotFoundException">Can not find the player by name</exception>
+        /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
         public Entities.TornPlayer GetPlayer(string name, bool forceUpdate = false)
         {
-            TornBot.Entities.TornPlayer? tornPlayer;
+            TornBot.Entities.TornPlayer tornPlayer;
             
             // Lets try and get a record from the database. If there is no record, we get given a null
             Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name  == name).FirstOrDefault();
@@ -103,61 +129,86 @@ namespace TornBot.Services.Players.Service
                 //Check to see if the local cache is stale or forceUpdate is true
                 if (dbPlayer.LastUpdated.CompareTo(DateTime.Now.AddDays(-MaxTornPlayerCacheAge)) < 0 || forceUpdate)
                 {
-                    //Lets pull a copy from Torn, based on the Id from the local cache
-                    tornPlayer = _torn.GetPlayer(dbPlayer.Id);
-                    if (tornPlayer != null && tornPlayer.Name == name)
+                    try
                     {
-                        //The players has not changed their name. We now have a valid player Id
-                        _database.TornPlayers.Update(new TornBot.Database.Entities.TornPlayer(tornPlayer));
-                        _database.SaveChanges();
-                        return tornPlayer;
+                        //Lets pull a copy from Torn, based on the Id from the local cache
+                        tornPlayer = _torn.GetPlayer(dbPlayer.Id);
+                        if (tornPlayer.Name == name)
+                        {
+                            //The players has not changed their name. We now have a valid player Id
+                            _database.TornPlayers.Update(new TornBot.Database.Entities.TornPlayer(tornPlayer));
+                            _database.SaveChanges();
+                            return tornPlayer;
+                        }
                     }
-                    else
+                    catch (Exception)
                     {
-                        //The local cache name doesnt match the return from Torn. 
-                        //We can use TornStats spy lookup on a name
+                        //If there was an API exception we can try a lookup on TornStats an and then try another Torn API call                      
+                    }
+                    
+                    //The local cache name doesnt match the return from Torn (or Torn API had an issue)
+                    //We can use TornStats spy lookup on a name
+                    try
+                    {                    
                         Entities.BattleStats tsBattleStats = GetBattleStats(name, true);
-                        if (tsBattleStats != null)
-                        {
-                            return GetPlayer(tsBattleStats.PlayerId, true);
-                        }
-                        else
-                        {
-                            return null;
-                        }
+                        return GetPlayer(tsBattleStats.PlayerId, true);
+                    }
+                    catch (Exception e)
+                    {
+                        //We've failed to get any updated data but we still have our DB record. Use it
+                        return dbPlayer.ToTornPlayer();
                     }
                 }
                 else
                 {
+                    //Record is not stale. Lets use it
                     return dbPlayer.ToTornPlayer();
                 }
             }
             else
             {
-                Entities.BattleStats battleStats = GetBattleStats(name, true);
-                if (battleStats != null)
+                Entities.BattleStats battleStats;
+                try
+                {
+                    battleStats = GetBattleStats(name, true);
+                }
+                catch (Exception e)
+                {
+                    throw new PlayerNotFoundException("Unable to player by name");
+                }
+
+                try
                 {
                     UInt32 id = battleStats.PlayerId;
-                    
-                    tornPlayer = _torn.GetPlayer(id);
-                    if (tornPlayer != null)
-                    {
-                        _database.TornPlayers.Add(new Database.Entities.TornPlayer(tornPlayer));
-                        _database.SaveChanges();
 
-                        return tornPlayer;
-                    }
-                    else
-                        return null; 
+                    tornPlayer = _torn.GetPlayer(id);
+
+                    _database.TornPlayers.Add(new Database.Entities.TornPlayer(tornPlayer));
+                    _database.SaveChanges();
+
+                    return tornPlayer;
                 }
-                else
+                catch (ApiCallFailureException)
                 {
-                    return null;
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    throw new ApiCallFailureException("Unable to get player", e);
                 }
             }
         }
 
-        public Entities.BattleStats? GetBattleStats(string IdOrName, bool checkUpdate = false)
+        /// <summary>
+        /// Attempts to find a Torn Player by name
+        /// Will check the DB first, if its stale, will call Torn API to update the DB
+        /// If no record is found, will try calling TornStats GetBattleStats(name) and try to get a player id
+        /// </summary>
+        /// <param name="IdOrName">Torn Player id or name</param>
+        /// <param name="checkUpdate">Force an update from TornStats. always consider the DB record to be stale</param>
+        /// <returns>Entities.BattleStats</returns>
+        /// <exception cref="BattleStatsNotAvailableException">No Battle Stats have been found. Inner exception can include API exceptions</exception>
+        public Entities.BattleStats GetBattleStats(string IdOrName, bool checkUpdate = false)
         {
             UInt32 idUInt;
             Database.Entities.BattleStats? dbBattleStats = null;
@@ -171,8 +222,8 @@ namespace TornBot.Services.Players.Service
                 }
                 else
                 {
-                    Database.Entities.TornPlayer? dbPlayer =
-                        _database.TornPlayers.Where(s => s.Name == IdOrName).FirstOrDefault();
+                    Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name == IdOrName).FirstOrDefault();
+                    
                     if (dbPlayer != null)
                     {
                         dbBattleStats = _database.BattleStats.Where(s => s.PlayerId == dbPlayer.Id).FirstOrDefault();
@@ -201,42 +252,48 @@ namespace TornBot.Services.Players.Service
             else
             {
                 // We need to figure out what, if anything, we can send back
+
                 //Lets try and get some battleStats from TornStats
-                Entities.BattleStats tsBattleStats = _tornStats.GetPlayerStats(IdOrName);
-
-                //If we have nothing, end game
-                if(dbBattleStats == null && tsBattleStats == null)
+                Entities.BattleStats tsBattleStats;
+                try
                 {
-                    //We have nothing, so hand back null
-                    return null;
+                    tsBattleStats = _tornStats.GetPlayerStats(IdOrName);
                 }
-                else if (tsBattleStats == null)
+                catch (Exception e)
                 {
-                    //We have something from the database and but nothing else
-                    return dbBattleStats.ToBattleStats();
-                }
-                else
-                {
-                    // We might have something from the DB
-                    // We do have something from TS
-
-                    //If we dont have anything in the database OR
-                    //TS stat is newer than what we have
-                    if (dbBattleStats == null || tsBattleStats.BattleStatsTimestamp.CompareTo(dbBattleStats.Timestamp) > 0)
+                    if (dbBattleStats == null)
                     {
-                        //TS is newer (or local one doesnt exist)
-                        Database.Entities.BattleStats newDbBattleStats = new Database.Entities.BattleStats(tsBattleStats);
-                        _database.BattleStats.Add(newDbBattleStats);
-                        _database.SaveChanges();
-
-                        return tsBattleStats;
+                        //We have nothing. Throw an exception
+                        throw new BattleStatsNotAvailableException("Error in getting spy from TornStats", e);
                     }
                     else
                     {
-                        // Return what was in the database. Its either newer or same age as TS
+                        //We have something from the DB. That's all we have, so return it
                         return dbBattleStats.ToBattleStats();
                     }
                 }
+
+                
+                // We might have something from the DB
+                // We do have something from TS
+
+                //If we dont have anything in the database OR
+                //TS stat is newer than what we have
+                if (dbBattleStats == null || tsBattleStats.BattleStatsTimestamp.CompareTo(dbBattleStats.Timestamp) > 0)
+                {
+                    //TS is newer (or local one doesnt exist)
+                    Database.Entities.BattleStats newDbBattleStats = new Database.Entities.BattleStats(tsBattleStats);
+                    _database.BattleStats.Add(newDbBattleStats);
+                    _database.SaveChanges();
+
+                    return tsBattleStats;
+                }
+                else
+                {
+                    // Return what was in the database. Its either newer or same age as TS
+                    return dbBattleStats.ToBattleStats();
+                }
+                
             }
         }
 
