@@ -20,6 +20,7 @@
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 using System.Globalization;
+using TornBot.Exceptions;
 using TornBot.Services.Players.Service;
 using TornBot.Services.TornApi.Services;
 using TornBot.Services.TornStatsApi.Services;
@@ -39,31 +40,77 @@ namespace TornBot.Services.Discord.Commands.Slash
         [SlashCommand("Stats", "Gets the stats of a player")]
         public async Task Stats(
             InteractionContext ctx,
-            [Option("PlayerID", "ID of the player or name")] string id)
+            [Option("PlayerID", "ID of the player or name")] string idOrName)
         {
             await ctx.DeferAsync();
 
-            //id = id.Replace(" ", ""); //this is to make sure there is no space before id/name
-            id = id.Trim();
+            idOrName = idOrName.Trim();
 
-            Entities.BattleStats battleStats = _players.GetBattleStats(id);
-
-
-            if (battleStats == null)
+            Entities.BattleStats battleStats;
+            try
             {
-                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats from TornStats"));
+                battleStats = _players.GetBattleStats(idOrName);
+            }
+            catch (BattleStatsNotAvailableException e)
+            {
+                string message;
+                if (e.InnerException is ApiCallFailureException apiException)
+                {
+                    message = apiException.InnerException switch
+                    {
+                        PlayerNotFoundException => "No Battle Stats found for player",
+                        ApiNotAvailableException => "No local Battle Stats and TornStats API is unavailable. Please try again later",
+                        InvalidKeyException => "No local Battle Stats and no available API keys for TornStats API. Please try again later",
+                        _ => "Unknown error getting Battle Stats. Please try again later"
+                    };
+
+                }
+                else
+                    message = "Unknown error getting Battle Stats. Please try again later";
+                
+                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(message));
+                return;
+            }
+            catch (Exception e)
+            {
+                string message = "Unknown error getting Battle Stats. Please try again later";
+                
+                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(message));
                 return;
             }
 
-            Entities.TornPlayer player = _players.GetPlayer(battleStats.PlayerId);
-
-            if (player == null)
+            Entities.TornPlayer player;
+            try
             {
-                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Error getting stats from Torn"));
+                player = _players.GetPlayer(battleStats.PlayerId);
+            }
+            catch (ApiCallFailureException e)
+            {
+                string message;
+                if (e.InnerException is not null)
+                {
+                    message = e.InnerException switch
+                    {
+                        ApiNotAvailableException => "Torn API is unavailable. Please try again later",
+                        InvalidKeyException => "No available API keys for TornStats API. Please try again later",
+                        _ => "Unknown error getting BattleStats. Please try again later"
+                    };
+
+                }
+                else
+                    message = "Unknown error getting BattleStats. Please try again later";
+                
+                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(message));
                 return;
             }
-
-
+            catch (Exception e)
+            {
+                string message = "Unknown error getting Battle Stats. Please try again later";
+                
+                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(message));
+                return;
+            }
+            
             //Build a response for the user
             DiscordEmbedBuilder embed = new DiscordEmbedBuilder();
             embed.Title = String.Format("{0} [{1}]", player.Name, player.Id);

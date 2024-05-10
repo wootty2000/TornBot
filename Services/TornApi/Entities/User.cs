@@ -130,5 +130,24 @@ namespace TornBot.Services.TornApi.Entities
 
             return tornPlayer;
         }
+        public TornBot.Entities.ReviveStatus ToReviveStatus()
+        {
+            TornBot.Entities.TornPlayer tornPlayer = new TornBot.Entities.TornPlayer();
+            TornBot.Entities.TornFaction tornFaction = new TornBot.Entities.TornFaction();
+            TornBot.Entities.ReviveStatus revives = new TornBot.Entities.ReviveStatus();
+
+            tornFaction.Id = this.Faction.FactionId;
+            tornFaction.Name = this.Faction.FactionName;
+
+            tornPlayer.Id = this.PlayerId;
+            tornPlayer.Name = this.Name;
+            tornPlayer.Faction = tornFaction;
+            tornPlayer.Level = this.level;
+
+            revives.Player = tornPlayer;
+            revives.Revivable = this.revivable;
+
+            return revives;
+        }
     }
 }

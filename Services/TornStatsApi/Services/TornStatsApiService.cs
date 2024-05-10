@@ -25,6 +25,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using TornBot.Exceptions;
 
 namespace TornBot.Services.TornStatsApi.Services
 {
@@ -43,56 +44,123 @@ namespace TornBot.Services.TornStatsApi.Services
             _tornStatsApiKeys = tornStatsApiKeys;
         }
 
+        /// <summary>
+        /// Makes the actual GET request to TornStats' API
+        /// </summary>
+        /// <param name="endpoint">String of the endpoint including all parameters (inc Api Key)</param>
+        /// <returns>String - the raw response from the API</returns>
+        /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
         public string MakeApiRequest(string endpoint)
         {
             HttpClient client = new HttpClient();
-
             string url = baseUrl + endpoint;
 
+            JsonElement jsonResponse;
             try
             {
-                return client.GetAsync(url).Result.Content.ReadAsStringAsync().Result;
+                string response = client.GetAsync(url).Result.Content.ReadAsStringAsync().Result;
+                
+                //Try to XML serialise the response string and use it to check for error status / error codes
+                jsonResponse = JsonSerializer.Deserialize<dynamic>(response);
+
+                //If the status property is True, the call was successful
+                if (jsonResponse.TryGetProperty("status", out JsonElement statusElement) && statusElement.ValueKind == JsonValueKind.True)
+                    return response;
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Error making API call to TornStats");
-                return null;
+                //TODO - log this properly. We probably want the ApiKey to be passed in for logging who's key went wrong
+                Console.WriteLine("Error in rest call to TornStats: " + e.Message);
+                throw new ApiCallFailureException("Error making API call to TornStats", e);
+            }
+
+            jsonResponse.TryGetProperty("message", out JsonElement messageElement);
+            
+            //If we got here, there was a an error code from Torn's API. Return the most appropriate exception
+            throw messageElement.GetString() switch
+            {
+                "ERROR: User not found." => new ApiCallFailureException("Supplied API key is invalid", new InvalidKeyException()),
+                "Error: No data found." => new ApiCallFailureException("Spy not found", new PlayerNotFoundException()),
+                _ => new ApiCallFailureException( "Unknown Exception", new UnknownException(String.Format("TornState API Error Message: {0}", messageElement.GetString())))
+            };
+
+        }
+
+        /// <summary>
+        /// Attempt to get the Player's BattleStats from TornStats' API
+        /// Will use the next available API key from the key store
+        /// </summary>
+        /// <param name="playerIdOrName">Torn Player id or name</param>
+        /// <returns>TornBot.Entities.BattleStats object</returns>
+        /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
+        public TornBot.Entities.BattleStats GetPlayerStats(string playerIdOrName)
+        {
+            //Loop until we get a valid response or run out of API keys or a other API call failure
+            while (true)
+            {
+                string key;
+
+                try
+                {
+                    key = _tornStatsApiKeys.GetNextKey();
+                    
+                    return GetPlayerStats(playerIdOrName, key);
+
+                }
+                catch (ApiCallFailureException e)
+                {
+                    if (e.InnerException is not null)
+                    {
+                        if (e.InnerException is InvalidKeyException)
+                        {
+                            //TODO mark the key as invalid in the key store
+                            continue;
+                        } 
+                        else
+                        {
+                            throw;
+                        }
+
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new ApiCallFailureException("Error in TornStats API GetPlayerStats(string playerIdOrName)", e);
+                }
             }
         }
 
-        public TornBot.Entities.BattleStats GetPlayerStats(string playerIdOrName)
-        {
-            string key = _tornStatsApiKeys.GetNextKey();
-
-            return GetPlayerStats(playerIdOrName, key);
-        }
-
+        /// <summary>
+        /// Attempt to get the Player's BattleStats from TornStats' API
+        /// </summary>
+        /// <param name="playerIdOrName">Torn Player id or name</param>
+        /// <param name="apiKey">Api Key to use</param>
+        /// <returns>TornBot.Entities.BattleStats object</returns>
+        /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
         public TornBot.Entities.BattleStats GetPlayerStats(string playerIdOrName, string apiKey)
         {
             string url = String.Format("v2/{0}/spy/user/{1}", apiKey, playerIdOrName);
-            string apiResponse = MakeApiRequest(url);
-
-            bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
-
-            if (responseHandled)
-            {
-                return null;
-            }
-
+            
             try
-            {
+            {   
+                string apiResponse = MakeApiRequest(url);
+
                 TornStatsApi.Entities.Spy spy = JsonSerializer.Deserialize<TornStatsApi.Entities.Spy>(apiResponse);
 
                 TornBot.Entities.BattleStats battleStats = spy.ToBattleStats();
 
                 return battleStats;
             }
+            catch (ApiCallFailureException)
+            {
+                throw;
+            }
             catch (Exception e)
             {
-                _logger.LogError(e, "Error deserializing TornStats API Spy");
-
-                return null;
+                //TODO log this correctly
+                throw new ApiCallFailureException("Error deserializing TornStats spy data", e);
             }
+
         }
     }
 }
