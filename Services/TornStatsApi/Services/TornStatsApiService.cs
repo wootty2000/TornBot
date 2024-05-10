@@ -74,7 +74,7 @@ namespace TornBot.Services.TornStatsApi.Services
                 throw new ApiCallFailureException("Error making API call to TornStats", e);
             }
 
-            jsonResponse.TryGetProperty("status", out JsonElement messageElement);
+            jsonResponse.TryGetProperty("message", out JsonElement messageElement);
             
             //If we got here, there was a an error code from Torn's API. Return the most appropriate exception
             throw messageElement.GetString() switch
