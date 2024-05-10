@@ -1,4 +1,4 @@
-﻿//
+//
 // TornBot
 //
 // Copyright (C) 2024 TornBot.com
@@ -17,6 +17,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using TornBot.Database;
 using TornBot.Exceptions;
@@ -30,19 +32,69 @@ namespace TornBot.Services.Players.Service
         private const int MaxStatsCacheAge = 14;
         private const int MaxTornPlayerCacheAge = 7;
 
+        private readonly IConfigurationRoot _config;
         private DatabaseContext _database;
         private TornApiService _torn;
         private TornStatsApiService _tornStats;
-
         public PlayersService(
             DatabaseContext database,
             TornApiService torn,
-            TornStatsApiService tornStats
+            TornStatsApiService tornStats,
+            IConfigurationRoot config
         ) 
         {
             _database = database;
             _torn = torn;
             _tornStats = tornStats;
+            _config = config;
+        }
+        
+        public string AddApiKey(string api_key)
+        {
+            
+            Entities.ApiKeys apiKeyInfo;
+            apiKeyInfo = _torn.GetApiKeyInfo(api_key);
+            if (apiKeyInfo != null)
+            {
+                Entities.TornPlayer user = _torn.GetApiKeyUser(api_key);
+                apiKeyInfo.PlayerId = user.Id;
+                apiKeyInfo.FactionId = user.Faction.Id;
+                apiKeyInfo.ApiKey = api_key;
+            }
+            //add api key with info to database
+            if (apiKeyInfo != null && apiKeyInfo.PlayerId > 0)
+            {
+                UInt32 factionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
+                if (apiKeyInfo.FactionId != factionId)  //it is outside api key
+                {
+                    apiKeyInfo.AccessLevel = 6;
+                }
+
+                Database.Entities.ApiKeys? dbPlayer = _database.ApiKeys.Where(s => s.PlayerId == apiKeyInfo.PlayerId).FirstOrDefault();
+                if (dbPlayer == null)   //add new api key
+                {
+                    apiKeyInfo.TornApiAddedTimestamp = DateTime.UtcNow;
+                    //apiKeyInfo.TornStatsApiAddedTimestamp = null;
+                    apiKeyInfo.TornStatsLastUsed = null;
+                    apiKeyInfo.TornStatsApiKey = "";
+                    _database.ApiKeys.Add(new Database.Entities.ApiKeys(apiKeyInfo));
+                    _database.SaveChanges();
+                    return "Api key has been added successfully";
+                }
+                else    //update existing api key
+                {
+                    apiKeyInfo.TornApiAddedTimestamp = DateTime.UtcNow;
+                    apiKeyInfo.TornStatsApiKey = dbPlayer.TornStatsApiKey;
+                    
+                    _database.Entry(dbPlayer).State = EntityState.Detached;     // Detach the entity
+                    _database.ApiKeys.Update(new Database.Entities.ApiKeys(apiKeyInfo));
+                    _database.SaveChanges();
+                    return "Api key has been updated successfully";
+                }
+
+            }
+            else
+                return "Error registering api key into database. Please try again";
         }
         
         /// <summary>

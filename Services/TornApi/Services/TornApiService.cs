@@ -96,7 +96,7 @@ namespace TornBot.Services.TornApi.Services
 
                 try
                 {
-                    key = tornApiKeys.GetNextKey();
+                    key = tornApiKeys.GetNextKey(7);
 
                     return GetPlayer(id, key);
                 }
@@ -118,7 +118,6 @@ namespace TornBot.Services.TornApi.Services
                         {
                             throw;
                         }
-
                     }
                 }
                 catch (Exception e)
@@ -175,7 +174,7 @@ namespace TornBot.Services.TornApi.Services
                 
                 try
                 {
-                    key = tornApiKeys.GetNextKey();
+                    key = tornApiKeys.GetNextKey(7);
                     
                     return GetFaction(id, key);
                 }
@@ -250,7 +249,7 @@ namespace TornBot.Services.TornApi.Services
                 
                 try
                 {
-                    key = tornApiKeys.GetNextKey();
+                    key = tornApiKeys.GetNextKey(7);
                     
                     return GetStocks(key);
                 }
@@ -337,6 +336,43 @@ namespace TornBot.Services.TornApi.Services
                 //TODO log this correctly
                 throw new ApiCallFailureException("Error deserializing revive status data", e);
             }
+        }
+        public TornBot.Entities.ApiKeys GetApiKeyInfo(string apiKey)
+        {
+            string url = String.Format("key/?selections=info&key={0}", apiKey);
+            string apiResponse = MakeApiRequest(url);
+
+            bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
+
+            if (responseHandled)
+            {
+                return null;
+            }
+
+            TornApi.Entities.Key api_key = JsonSerializer.Deserialize<TornApi.Entities.Key>(apiResponse);
+
+            TornBot.Entities.ApiKeys toApiKey = api_key.ToApiKey();
+            
+
+            return toApiKey;
+        }
+        
+        public TornBot.Entities.TornPlayer GetApiKeyUser(string apiKey)
+        {
+            string url = String.Format("user/?key={0}", apiKey);
+            string apiResponse = MakeApiRequest(url);
+
+            bool responseHandled = TornBot.Services.ResponseHandler.HandleResponse(JsonSerializer.Deserialize<dynamic>(apiResponse));
+
+            if (responseHandled)
+            {
+                //return null;
+            }
+
+            TornApi.Entities.User user = JsonSerializer.Deserialize<TornApi.Entities.User>(apiResponse);
+            TornBot.Entities.TornPlayer toTornPlayer = user.ToTornPlayer();
+
+            return toTornPlayer;
         }
     }
 }
