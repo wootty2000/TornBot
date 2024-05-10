@@ -43,7 +43,7 @@ namespace TornBot
             var services = builder.Services;
 
             // Add the configuration to the registered services
-            services.AddSingleton(config); 
+            services.AddSingleton(config);
 
             //Get the database setup
             DatabaseContext.Init(config, services);
@@ -54,15 +54,15 @@ namespace TornBot
             serviceProvider = services.BuildServiceProvider();
 
             //Lets get it built
-            app = builder.Build();
-
+                app = builder.Build();
+            
             await RunAsync(app);
         }
 
         public async Task RunAsync(WebApplication app)
         {
             app.RunAsync();
-            
+
             //Delay forever
             await Task.Delay(-1);
         }

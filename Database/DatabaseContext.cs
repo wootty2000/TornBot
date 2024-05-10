@@ -13,6 +13,7 @@ namespace TornBot.Database
         public DbSet<Settings> Settings { get; set; }
         public DbSet<TornPlayer> TornPlayers { get; set; }
         public DbSet<BattleStats> BattleStats { get; set; }
+        public DbSet<ApiKeys> ApiKeys { get; set; }
 
         public DatabaseContext(DbContextOptions<DatabaseContext> options)
             : base(options)

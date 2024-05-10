@@ -47,15 +47,13 @@ namespace TornBot
         // <sumary>
         // Torn API key
         // </summary>
-        [JsonProperty("TornApiKey")]
-        internal string TornApiKey = "Torn API Key";
+        [JsonProperty("TornFactionId")]
+        internal string TornFactionId = "Torn Faction ID";
 
 
         // <sumary>
         // Torn API key
         // </summary>
-        [JsonProperty("TornstatsApiKey")]
-        internal string TornstatsApiKey = "TornStats API";
 
         [JsonProperty("DbHost")]
         internal string DbHost = "localhost";
