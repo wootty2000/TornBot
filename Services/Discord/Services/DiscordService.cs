@@ -74,15 +74,15 @@ namespace TornBot.Services.Discord.Services
             };
             slashCommands = discord.UseSlashCommands(slashConfig);
 
-#if RELEASE
-            slashCommands.RegisterCommands(asm);
-#else
+//#if RELEASE
+//            slashCommands.RegisterCommands(asm);
+//#else
             UInt64 guild = _config.GetValue<UInt64>("TestGuild");
             Console.WriteLine("guild: " + guild);
 
             Console.WriteLine("SlashCommands are registered in debug mode");
             slashCommands.RegisterCommands(asm, guild);
-#endif
+//#endif
             // End of Slash Commands
             //----------------------
 

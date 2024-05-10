@@ -320,7 +320,7 @@ namespace TornBot.Services.TornApi.Services
         public TornBot.Entities.ReviveStatus GetReviveStatus(UInt32 id)
         {
             //We ideally want to use an external API key so it doesnt return friends/faction
-            string key = tornApiKeys.GetNextKey();
+            string key = tornApiKeys.GetNextKey(6);
             string url = String.Format("user/{0}?key={1}", id.ToString(), key);
             string apiResponse = MakeApiRequest(url);
 
