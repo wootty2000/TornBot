@@ -47,7 +47,7 @@ namespace TornBot.Services.ApiKeyManagement.Service
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
                 TornBot.Entities.ApiKeys apiKeyInfo;
-                Database.Entities.ApiKeys? dbPlayer;
+                Services.Database.Entities.ApiKeys? dbPlayer;
                 dbPlayer = dbContext.ApiKeys //get the torn stats api key that hasnt been used for the longest
                 .Where(s => s.TornStatsApiKey != "")
                 .OrderBy(s => s.TornLastUsed)
@@ -56,14 +56,14 @@ namespace TornBot.Services.ApiKeyManagement.Service
                 {
                     try
                     {
-                    dbContext.Entry(dbPlayer).State = EntityState.Detached;
-                    Console.WriteLine("Db torn stats api key used: " + dbPlayer.TornStatsApiKey);
+                        dbContext.Entry(dbPlayer).State = EntityState.Detached;
+                        Console.WriteLine("Db torn stats api key used: " + dbPlayer.TornStatsApiKey);
 
-                    apiKeyInfo = dbPlayer.ToApiKey();
-                    apiKeyInfo.TornStatsLastUsed = DateTime.UtcNow;  //set LastUsed to now
-                    dbContext.ApiKeys.Update(new Database.Entities.ApiKeys(apiKeyInfo)); //updates LastUsed 
-                    dbContext.SaveChanges();
-                    return dbPlayer.TornStatsApiKey;
+                        apiKeyInfo = dbPlayer.ToApiKey();
+                        apiKeyInfo.TornStatsLastUsed = DateTime.UtcNow;  //set LastUsed to now
+                        dbContext.ApiKeys.Update(new Services.Database.Entities.ApiKeys(apiKeyInfo)); //updates LastUsed 
+                        dbContext.SaveChanges();
+                        return dbPlayer.TornStatsApiKey;
                     }
                     catch (Exception ex)
                     {

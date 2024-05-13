@@ -55,7 +55,7 @@ namespace TornBot.Services.ApiKeyManagement.Service
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
                 TornBot.Entities.ApiKeys apiKeyInfo;
-                Database.Entities.ApiKeys? dbPlayer;
+                Services.Database.Entities.ApiKeys? dbPlayer;
 
                 if (accessLevel == 7)
                 {
