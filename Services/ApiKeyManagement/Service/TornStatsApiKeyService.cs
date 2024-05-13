@@ -17,36 +17,28 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+using Google.Protobuf.WellKnownTypes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TornBot.Database;
+using TornBot.Services.Database;
 
-namespace TornBot.Services.TornApi.Services
+namespace TornBot.Services.ApiKeyManagement.Service
 {
-    public class TornApiKeys
+    public class TornStatsApiKeyService
     {
-        //private readonly IConfigurationRoot config;
         private readonly IServiceProvider serviceProvider;
 
-        public TornApiKeys(/*IConfigurationRoot config, */IServiceProvider serviceProvider)
+        public TornStatsApiKeyService(IServiceProvider serviceProvider)
         {
-            //this.config = config;
             this.serviceProvider = serviceProvider;
         }
-        /*
-          public TornApiKeys(
-            DatabaseContext database
-        ){
-            _database = database;
-            
-        }
-         */
-        public string GetNextKey(UInt16 accessLevel)
+
+        public string GetNextKey()
         {
             /* accessLevel is uint value that describing which AccessLevel from database we want to use 
              * AccessLevel
              * 1-4 - for torn perms (from public to full access)
-             * 5 - with fac perms                                                       //to do
+             * 5 - with fac perms
              * 6 - outside api key (for checking revives)
              * 7 - any 1-4 torn perms
              * 
@@ -56,39 +48,32 @@ namespace TornBot.Services.TornApi.Services
                 var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
                 TornBot.Entities.ApiKeys apiKeyInfo;
                 Database.Entities.ApiKeys? dbPlayer;
-
-                if (accessLevel == 7)
-                {
-                dbPlayer = dbContext.ApiKeys //get the api key that hasnt been used for the longest
-                .Where(s => s.AccessLevel < 5)
+                dbPlayer = dbContext.ApiKeys //get the torn stats api key that hasnt been used for the longest
+                .Where(s => s.TornStatsApiKey != "")
                 .OrderBy(s => s.TornLastUsed)
                 .FirstOrDefault();
-                }
-                else
-                {
-                dbPlayer = dbContext.ApiKeys //get the api key that hasnt been used for the longest
-                .Where(s => s.AccessLevel == accessLevel)
-                .OrderBy(s => s.TornLastUsed)
-                .FirstOrDefault();
-                }
-
                 if (dbPlayer != null)
                 {
+                    try
+                    {
                     dbContext.Entry(dbPlayer).State = EntityState.Detached;
-                    Console.WriteLine("Db api key used: " + dbPlayer.ApiKey);
+                    Console.WriteLine("Db torn stats api key used: " + dbPlayer.TornStatsApiKey);
 
                     apiKeyInfo = dbPlayer.ToApiKey();
-                    apiKeyInfo.TornLastUsed = DateTime.UtcNow;  //set LastUsed to now
-
+                    apiKeyInfo.TornStatsLastUsed = DateTime.UtcNow;  //set LastUsed to now
                     dbContext.ApiKeys.Update(new Database.Entities.ApiKeys(apiKeyInfo)); //updates LastUsed 
                     dbContext.SaveChanges();
-
-                    return dbPlayer.ApiKey;
-                }else
+                    return dbPlayer.TornStatsApiKey;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("An error occurred: " + ex.Message);
+                        // You can log the exception or handle it as needed
+                    }
+                }
+                else
                     return null;
-
-
-                
+                return null;
             }
         }
     }

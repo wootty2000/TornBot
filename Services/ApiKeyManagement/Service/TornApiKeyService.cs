@@ -17,34 +17,36 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-using Google.Protobuf.WellKnownTypes;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TornBot.Database;
+using TornBot.Services.Database;
 
-namespace TornBot.Services.TornStatsApi.Services
+namespace TornBot.Services.ApiKeyManagement.Service
 {
-    public class TornStatsApiKeys
+    public class TornApiKeyService
     {
+        //private readonly IConfigurationRoot config;
         private readonly IServiceProvider serviceProvider;
 
-        public TornStatsApiKeys(IServiceProvider serviceProvider)
+        public TornApiKeyService(/*IConfigurationRoot config, */IServiceProvider serviceProvider)
         {
+            //this.config = config;
             this.serviceProvider = serviceProvider;
         }
-
-        public string GetNextKey()
+        /*
+          public TornApiKeyService(
+            DatabaseContext database
+        ){
+            _database = database;
+            
+        }
+         */
+        public string GetNextKey(UInt16 accessLevel)
         {
             /* accessLevel is uint value that describing which AccessLevel from database we want to use 
              * AccessLevel
              * 1-4 - for torn perms (from public to full access)
-             * 5 - with fac perms
+             * 5 - with fac perms                                                       //to do
              * 6 - outside api key (for checking revives)
              * 7 - any 1-4 torn perms
              * 
@@ -54,32 +56,39 @@ namespace TornBot.Services.TornStatsApi.Services
                 var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
                 TornBot.Entities.ApiKeys apiKeyInfo;
                 Database.Entities.ApiKeys? dbPlayer;
-                dbPlayer = dbContext.ApiKeys //get the torn stats api key that hasnt been used for the longest
-                .Where(s => s.TornStatsApiKey != "")
+
+                if (accessLevel == 7)
+                {
+                dbPlayer = dbContext.ApiKeys //get the api key that hasnt been used for the longest
+                .Where(s => s.AccessLevel < 5)
                 .OrderBy(s => s.TornLastUsed)
                 .FirstOrDefault();
-                if (dbPlayer != null)
-                {
-                    try
-                    {
-                    dbContext.Entry(dbPlayer).State = EntityState.Detached;
-                    Console.WriteLine("Db torn stats api key used: " + dbPlayer.TornStatsApiKey);
-
-                    apiKeyInfo = dbPlayer.ToApiKey();
-                    apiKeyInfo.TornStatsLastUsed = DateTime.UtcNow;  //set LastUsed to now
-                    dbContext.ApiKeys.Update(new Database.Entities.ApiKeys(apiKeyInfo)); //updates LastUsed 
-                    dbContext.SaveChanges();
-                    return dbPlayer.TornStatsApiKey;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("An error occurred: " + ex.Message);
-                        // You can log the exception or handle it as needed
-                    }
                 }
                 else
+                {
+                dbPlayer = dbContext.ApiKeys //get the api key that hasnt been used for the longest
+                .Where(s => s.AccessLevel == accessLevel)
+                .OrderBy(s => s.TornLastUsed)
+                .FirstOrDefault();
+                }
+
+                if (dbPlayer != null)
+                {
+                    dbContext.Entry(dbPlayer).State = EntityState.Detached;
+                    Console.WriteLine("Db api key used: " + dbPlayer.ApiKey);
+
+                    apiKeyInfo = dbPlayer.ToApiKey();
+                    apiKeyInfo.TornLastUsed = DateTime.UtcNow;  //set LastUsed to now
+
+                    dbContext.ApiKeys.Update(new Database.Entities.ApiKeys(apiKeyInfo)); //updates LastUsed 
+                    dbContext.SaveChanges();
+
+                    return dbPlayer.ApiKey;
+                }else
                     return null;
-                return null;
+
+
+                
             }
         }
     }

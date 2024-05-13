@@ -17,15 +17,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using TornBot.Exceptions;
+using TornBot.Services.ApiKeyManagement.Service;
 
 namespace TornBot.Services.TornStatsApi.Services
 {
@@ -34,14 +29,14 @@ namespace TornBot.Services.TornStatsApi.Services
         private string baseUrl = "https://www.tornstats.com/api/";
 
         private readonly ILogger _logger;
-        private readonly TornStatsApiKeys _tornStatsApiKeys;
+        private readonly TornStatsApiKeyService _tornStatsApiKeyService;
 
         public TornStatsApiService(
             ILogger<TornStatsApiService> logger,
-            TornStatsApiKeys tornStatsApiKeys)
+            TornStatsApiKeyService tornStatsApiKeyService)
         {
             _logger = logger;
-            _tornStatsApiKeys = tornStatsApiKeys;
+            _tornStatsApiKeyService = tornStatsApiKeyService;
         }
 
         /// <summary>
@@ -102,7 +97,7 @@ namespace TornBot.Services.TornStatsApi.Services
 
                 try
                 {
-                    key = _tornStatsApiKeys.GetNextKey();
+                    key = _tornStatsApiKeyService.GetNextKey();
                     
                     return GetPlayerStats(playerIdOrName, key);
 

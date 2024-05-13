@@ -17,20 +17,16 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-using Microsoft.Extensions.Logging;
-using Quartz;
-using TornBot.Services.Cron.Infrastructure;
-using TornBot.Services.TornApi.Services;
-using TornBot.Services.Discord.Services;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualBasic;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
-using Google.Protobuf.WellKnownTypes;
+using Microsoft.Extensions.Logging;
+using Quartz;
+using TornBot.Services.Cron.Infrastructure;
+using TornBot.Services.Discord.Services;
+using TornBot.Services.TornApi.Services;
 
-namespace TornBot.Services.Cron.Jobs
+namespace TornBot.Features.InactivePlayerMonitor.Cron
 {
     public class InactivePlayersJob : WorkerJob
     {
@@ -69,7 +65,7 @@ namespace TornBot.Services.Cron.Jobs
         {
             //_logger.LogInformation("Stock update");
             UInt32 factionID = 0;
-            TornApi.Entities.Faction Faction = tornApiService.GetFaction(factionID);
+            Services.TornApi.Entities.Faction Faction = tornApiService.GetFaction(factionID);
 
             if (Faction == null)
             {

@@ -18,19 +18,11 @@
 //
 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
-using System.Globalization;
 using TornBot.Services.Players.Service;
-using TornBot.Services.TornApi.Entities;
-using Google.Protobuf.WellKnownTypes;
 
-namespace TornBot.Services.Discord.Commands.Slash
+namespace TornBot.Features.ReviveMonitor.Discord
 {
     public class RevivesCommand : ApplicationCommandModule
     {

@@ -37,6 +37,12 @@
 
   <ItemGroup>
     <Folder Include="Database\Migrations\" />
+    <Folder Include="Features\ApiKeyManagement\Commands\" />
+    <Folder Include="Features\GetPlayerStats\Discord\" />
+    <Folder Include="Features\InactivePlayerMonitor\Cron\" />
+    <Folder Include="Features\MonitorStocks\" />
+    <Folder Include="Features\ReviveMonitor\Command\" />
+    <Folder Include="Features\StocksMonitor\Cron\" />
     <Folder Include="Services\TornBotWeb\Web\" />
   </ItemGroup>
 

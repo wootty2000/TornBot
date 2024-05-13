@@ -86,8 +86,6 @@ namespace TornBot.Services.Discord.Services
             // End of Slash Commands
             //----------------------
 
-
-
             discord.GuildDownloadCompleted += GuildDownload;
             //slashCommands.SlashCommandErrored += EventListener.OnSlashCommandErrored;
             //slashCommands.AutocompleteErrored += EventListener.OnAutocompleteError;

@@ -20,7 +20,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using TornBot.Database;
+using TornBot.Services.Database;
 using TornBot.Exceptions;
 using TornBot.Services.TornApi.Services;
 using TornBot.Services.TornStatsApi.Services;
@@ -188,7 +188,7 @@ namespace TornBot.Services.Players.Service
                         if (tornPlayer.Name == name)
                         {
                             //The players has not changed their name. We now have a valid player Id
-                            _database.TornPlayers.Update(new TornBot.Database.Entities.TornPlayer(tornPlayer));
+                            _database.TornPlayers.Update(new Database.Entities.TornPlayer(tornPlayer));
                             _database.SaveChanges();
                             return tornPlayer;
                         }

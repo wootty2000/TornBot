@@ -19,6 +19,7 @@
 
 using System.Text.Json;
 using TornBot.Exceptions;
+using TornBot.Services.ApiKeyManagement.Service;
 
 namespace TornBot.Services.TornApi.Services
 {
@@ -26,11 +27,11 @@ namespace TornBot.Services.TornApi.Services
     {
         private string baseUrl = "https://api.torn.com/";
 
-        private readonly TornApiKeys tornApiKeys;
+        private readonly TornApiKeyService _tornApiKeyService;
 
-        public TornApiService(TornApiKeys tornApiKeys)
+        public TornApiService(TornApiKeyService tornApiKeyService)
         {
-            this.tornApiKeys = tornApiKeys;
+            this._tornApiKeyService = tornApiKeyService;
         }
 
         /// <summary>
@@ -96,7 +97,7 @@ namespace TornBot.Services.TornApi.Services
 
                 try
                 {
-                    key = tornApiKeys.GetNextKey(7);
+                    key = _tornApiKeyService.GetNextKey(7);
 
                     return GetPlayer(id, key);
                 }
@@ -174,7 +175,7 @@ namespace TornBot.Services.TornApi.Services
                 
                 try
                 {
-                    key = tornApiKeys.GetNextKey(7);
+                    key = _tornApiKeyService.GetNextKey(7);
                     
                     return GetFaction(id, key);
                 }
@@ -249,7 +250,7 @@ namespace TornBot.Services.TornApi.Services
                 
                 try
                 {
-                    key = tornApiKeys.GetNextKey(7);
+                    key = _tornApiKeyService.GetNextKey(7);
                     
                     return GetStocks(key);
                 }
@@ -320,7 +321,7 @@ namespace TornBot.Services.TornApi.Services
         public TornBot.Entities.ReviveStatus GetReviveStatus(UInt32 id)
         {
             //We ideally want to use an external API key so it doesnt return friends/faction
-            string key = tornApiKeys.GetNextKey(6);
+            string key = _tornApiKeyService.GetNextKey(6);
             string url = String.Format("user/{0}?key={1}", id.ToString(), key);
             string apiResponse = MakeApiRequest(url);
 
