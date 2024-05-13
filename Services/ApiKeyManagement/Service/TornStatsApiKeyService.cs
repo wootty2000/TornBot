@@ -19,22 +19,16 @@
 
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TornBot.Database;
+using TornBot.Services.Database;
 
-namespace TornBot.Services.TornStatsApi.Services
+namespace TornBot.Services.ApiKeyManagement.Service
 {
-    public class TornStatsApiKeys
+    public class TornStatsApiKeyService
     {
         private readonly IServiceProvider serviceProvider;
 
-        public TornStatsApiKeys(IServiceProvider serviceProvider)
+        public TornStatsApiKeyService(IServiceProvider serviceProvider)
         {
             this.serviceProvider = serviceProvider;
         }
@@ -53,7 +47,7 @@ namespace TornBot.Services.TornStatsApi.Services
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
                 TornBot.Entities.ApiKeys apiKeyInfo;
-                Database.Entities.ApiKeys? dbPlayer;
+                Services.Database.Entities.ApiKeys? dbPlayer;
                 dbPlayer = dbContext.ApiKeys //get the torn stats api key that hasnt been used for the longest
                 .Where(s => s.TornStatsApiKey != "")
                 .OrderBy(s => s.TornLastUsed)
@@ -62,14 +56,14 @@ namespace TornBot.Services.TornStatsApi.Services
                 {
                     try
                     {
-                    dbContext.Entry(dbPlayer).State = EntityState.Detached;
-                    Console.WriteLine("Db torn stats api key used: " + dbPlayer.TornStatsApiKey);
+                        dbContext.Entry(dbPlayer).State = EntityState.Detached;
+                        Console.WriteLine("Db torn stats api key used: " + dbPlayer.TornStatsApiKey);
 
-                    apiKeyInfo = dbPlayer.ToApiKey();
-                    apiKeyInfo.TornStatsLastUsed = DateTime.UtcNow;  //set LastUsed to now
-                    dbContext.ApiKeys.Update(new Database.Entities.ApiKeys(apiKeyInfo)); //updates LastUsed 
-                    dbContext.SaveChanges();
-                    return dbPlayer.TornStatsApiKey;
+                        apiKeyInfo = dbPlayer.ToApiKey();
+                        apiKeyInfo.TornStatsLastUsed = DateTime.UtcNow;  //set LastUsed to now
+                        dbContext.ApiKeys.Update(new Services.Database.Entities.ApiKeys(apiKeyInfo)); //updates LastUsed 
+                        dbContext.SaveChanges();
+                        return dbPlayer.TornStatsApiKey;
                     }
                     catch (Exception ex)
                     {

@@ -32,7 +32,6 @@ namespace TornBot.Services.TornApi
     {
         public IServiceCollection RegisterModule(IServiceCollection services)
         {
-            services.AddSingleton<TornApiKeys>();
             services.AddSingleton<TornApiService>();
 
             return services;

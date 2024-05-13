@@ -17,22 +17,19 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-using Microsoft.Extensions.DependencyInjection;
-using TornBot.Services.TornStatsApi.Services;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace TornBot.Services.TornStatsApi
+namespace TornBot.Services.Database.Entities
 {
-    public class TornStatsApiModule : IModule
+    public class Settings
     {
-        public TornStatsApiModule()
-        {
-        }
-
-        public IServiceCollection RegisterModule(IServiceCollection services)
-        {
-            services.AddSingleton<TornStatsApiService>();
-
-            return services;
-        }
+        public UInt32 Id { get; set; }
+        public string Module { get; set; }
+        public string Setting { get; set; }
+        public string Value { get; set; }
     }
 }

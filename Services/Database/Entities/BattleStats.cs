@@ -24,7 +24,7 @@ using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TornBot.Database.Entities
+namespace TornBot.Services.Database.Entities
 {
     public class BattleStats
     {

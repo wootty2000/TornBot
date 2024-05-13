@@ -17,15 +17,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+using System.Globalization;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
-using System.Globalization;
 using TornBot.Exceptions;
 using TornBot.Services.Players.Service;
-using TornBot.Services.TornApi.Services;
-using TornBot.Services.TornStatsApi.Services;
 
-namespace TornBot.Services.Discord.Commands.Slash
+namespace TornBot.Features.GetPlayerStats.Discord
 {
     public class StatsCommand : ApplicationCommandModule
     {

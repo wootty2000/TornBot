@@ -19,22 +19,22 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TornBot.Database;
+using TornBot.Services.Database;
 
-namespace TornBot.Services.TornApi.Services
+namespace TornBot.Services.ApiKeyManagement.Service
 {
-    public class TornApiKeys
+    public class TornApiKeyService
     {
         //private readonly IConfigurationRoot config;
         private readonly IServiceProvider serviceProvider;
 
-        public TornApiKeys(/*IConfigurationRoot config, */IServiceProvider serviceProvider)
+        public TornApiKeyService(/*IConfigurationRoot config, */IServiceProvider serviceProvider)
         {
             //this.config = config;
             this.serviceProvider = serviceProvider;
         }
         /*
-          public TornApiKeys(
+          public TornApiKeyService(
             DatabaseContext database
         ){
             _database = database;
@@ -55,7 +55,7 @@ namespace TornBot.Services.TornApi.Services
             {
                 var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
                 TornBot.Entities.ApiKeys apiKeyInfo;
-                Database.Entities.ApiKeys? dbPlayer;
+                Services.Database.Entities.ApiKeys? dbPlayer;
 
                 if (accessLevel == 7)
                 {

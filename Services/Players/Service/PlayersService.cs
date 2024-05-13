@@ -20,7 +20,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
-using TornBot.Database;
+using TornBot.Services.Database;
 using TornBot.Exceptions;
 using TornBot.Services.TornApi.Services;
 using TornBot.Services.TornStatsApi.Services;
@@ -70,14 +70,14 @@ namespace TornBot.Services.Players.Service
                     apiKeyInfo.AccessLevel = 6;
                 }
 
-                Database.Entities.ApiKeys? dbPlayer = _database.ApiKeys.Where(s => s.PlayerId == apiKeyInfo.PlayerId).FirstOrDefault();
+                Services.Database.Entities.ApiKeys? dbPlayer = _database.ApiKeys.Where(s => s.PlayerId == apiKeyInfo.PlayerId).FirstOrDefault();
                 if (dbPlayer == null)   //add new api key
                 {
                     apiKeyInfo.TornApiAddedTimestamp = DateTime.UtcNow;
                     //apiKeyInfo.TornStatsApiAddedTimestamp = null;
                     apiKeyInfo.TornStatsLastUsed = null;
                     apiKeyInfo.TornStatsApiKey = "";
-                    _database.ApiKeys.Add(new Database.Entities.ApiKeys(apiKeyInfo));
+                    _database.ApiKeys.Add(new Services.Database.Entities.ApiKeys(apiKeyInfo));
                     _database.SaveChanges();
                     return "Api key has been added successfully";
                 }
@@ -87,7 +87,7 @@ namespace TornBot.Services.Players.Service
                     apiKeyInfo.TornStatsApiKey = dbPlayer.TornStatsApiKey;
                     
                     _database.Entry(dbPlayer).State = EntityState.Detached;     // Detach the entity
-                    _database.ApiKeys.Update(new Database.Entities.ApiKeys(apiKeyInfo));
+                    _database.ApiKeys.Update(new Services.Database.Entities.ApiKeys(apiKeyInfo));
                     _database.SaveChanges();
                     return "Api key has been updated successfully";
                 }
@@ -120,7 +120,7 @@ namespace TornBot.Services.Players.Service
                 {
                     tornPlayer = _torn.GetPlayer(id);
 
-                    _database.TornPlayers.Add(new Database.Entities.TornPlayer(tornPlayer));
+                    _database.TornPlayers.Add(new Services.Database.Entities.TornPlayer(tornPlayer));
                     _database.SaveChanges();
 
                     return tornPlayer;
@@ -141,7 +141,7 @@ namespace TornBot.Services.Players.Service
                 {
                     tornPlayer = _torn.GetPlayer(id);
                     
-                    _database.TornPlayers.Update(new Database.Entities.TornPlayer(dbPlayer.Id, tornPlayer));
+                    _database.TornPlayers.Update(new Services.Database.Entities.TornPlayer(dbPlayer.Id, tornPlayer));
                     _database.SaveChanges();
 
                     return tornPlayer;
@@ -174,7 +174,7 @@ namespace TornBot.Services.Players.Service
             TornBot.Entities.TornPlayer tornPlayer;
             
             // Lets try and get a record from the database. If there is no record, we get given a null
-            Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name  == name).FirstOrDefault();
+            Services.Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name  == name).FirstOrDefault();
 
             if (dbPlayer != null)
             {
@@ -188,7 +188,7 @@ namespace TornBot.Services.Players.Service
                         if (tornPlayer.Name == name)
                         {
                             //The players has not changed their name. We now have a valid player Id
-                            _database.TornPlayers.Update(new TornBot.Database.Entities.TornPlayer(tornPlayer));
+                            _database.TornPlayers.Update(new Database.Entities.TornPlayer(tornPlayer));
                             _database.SaveChanges();
                             return tornPlayer;
                         }
@@ -263,7 +263,7 @@ namespace TornBot.Services.Players.Service
         public Entities.BattleStats GetBattleStats(string IdOrName, bool checkUpdate = false)
         {
             UInt32 idUInt;
-            Database.Entities.BattleStats? dbBattleStats = null;
+            Services.Database.Entities.BattleStats? dbBattleStats = null;
             
             //If we have checkUpdate we want to skip this so that we try to get something from TornStats
             if (!checkUpdate)
@@ -274,7 +274,7 @@ namespace TornBot.Services.Players.Service
                 }
                 else
                 {
-                    Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name == IdOrName).FirstOrDefault();
+                    Services.Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name == IdOrName).FirstOrDefault();
                     
                     if (dbPlayer != null)
                     {
@@ -334,7 +334,7 @@ namespace TornBot.Services.Players.Service
                 if (dbBattleStats == null || tsBattleStats.BattleStatsTimestamp.CompareTo(dbBattleStats.Timestamp) > 0)
                 {
                     //TS is newer (or local one doesnt exist)
-                    Database.Entities.BattleStats newDbBattleStats = new Database.Entities.BattleStats(tsBattleStats);
+                    Services.Database.Entities.BattleStats newDbBattleStats = new Services.Database.Entities.BattleStats(tsBattleStats);
                     _database.BattleStats.Add(newDbBattleStats);
                     _database.SaveChanges();
 

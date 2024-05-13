@@ -17,19 +17,18 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using TornBot.Services.ApiKeyManagement.Service;
 
-namespace TornBot.Database.Entities
+namespace TornBot.Services.ApiKeyManagement;
+public class ApiKeyManagementModule : IModule
 {
-    public class Settings
+    public IServiceCollection RegisterModule(IServiceCollection services)
     {
-        public UInt32 Id { get; set; }
-        public string Module { get; set; }
-        public string Setting { get; set; }
-        public string Value { get; set; }
+        services.AddSingleton<TornApiKeyService>();
+        services.AddSingleton<TornStatsApiKeyService>();
+
+        return services;
     }
 }
+

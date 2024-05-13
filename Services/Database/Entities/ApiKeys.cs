@@ -9,7 +9,7 @@ using TornBot.Entities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace TornBot.Database.Entities
+namespace TornBot.Services.Database.Entities
 {
     public class ApiKeys
     {
