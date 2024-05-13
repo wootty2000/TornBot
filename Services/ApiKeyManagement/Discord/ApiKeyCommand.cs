@@ -1,4 +1,4 @@
-﻿//
+//
 // TornBot
 //
 // Copyright (C) 2024 TornBot.com
