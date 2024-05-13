@@ -22,7 +22,7 @@ using Microsoft.Extensions.Configuration;
 using TornBot.Services;
 using Microsoft.AspNetCore.Builder;
 using System.Diagnostics;
-using TornBot.Database;
+using TornBot.Services.Database;
 
 namespace TornBot
 {

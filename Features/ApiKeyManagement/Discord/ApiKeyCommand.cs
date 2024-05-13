@@ -1,14 +1,7 @@
-﻿using DSharpPlus;
-using DSharpPlus.Entities;
-using DSharpPlus.SlashCommands;
-using System.Drawing;
-using System.Globalization;
-using System.Runtime.CompilerServices;
+﻿using DSharpPlus.SlashCommands;
 using TornBot.Services.Players.Service;
-using TornBot.Services.TornApi.Services;
-using TornBot.Services.TornStatsApi.Services;
 
-namespace TornBot.Services.Discord.Commands.Slash
+namespace TornBot.Features.ApiKeyManagement.Discord
 {
     public class ApiKeyCommand : ApplicationCommandModule
     {

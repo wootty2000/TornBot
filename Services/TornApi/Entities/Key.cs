@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using TornBot.Database.Entities;
+using TornBot.Services.Database.Entities;
 using TornBot.Entities;
 
 namespace TornBot.Services.TornApi.Entities

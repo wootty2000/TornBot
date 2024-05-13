@@ -19,7 +19,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TornBot.Database;
+using TornBot.Services.Database;
 
 namespace TornBot.Services.TornApi.Services
 {

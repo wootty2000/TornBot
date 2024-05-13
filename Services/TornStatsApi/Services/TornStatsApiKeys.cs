@@ -26,7 +26,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using TornBot.Database;
+using TornBot.Services.Database;
 
 namespace TornBot.Services.TornStatsApi.Services
 {

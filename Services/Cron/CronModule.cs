@@ -28,7 +28,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using TornBot.Database;
+using TornBot.Services.Database;
 using TornBot.Services.Cron.Infrastructure;
 
 namespace TornBot.Services.Cron

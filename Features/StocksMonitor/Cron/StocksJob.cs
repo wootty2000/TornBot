@@ -17,16 +17,16 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-using Microsoft.Extensions.Logging;
-using Quartz;
-using TornBot.Services.Cron.Infrastructure;
-using TornBot.Services.TornApi.Services;
-using TornBot.Services.Discord.Services;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Quartz;
+using TornBot.Services.Cron.Infrastructure;
+using TornBot.Services.Discord.Services;
+using TornBot.Services.TornApi.Services;
 
-namespace TornBot.Services.Cron.Jobs
+namespace TornBot.Features.StocksMonitor.Cron
 {
     public class StocksJob : WorkerJob
     {
@@ -65,7 +65,7 @@ namespace TornBot.Services.Cron.Jobs
         {
             //_logger.LogInformation("Stock update");
 
-            TornApi.Entities.StockResponse stockResponse = tornApiService.GetStocks();
+            Services.TornApi.Entities.StockResponse stockResponse = tornApiService.GetStocks();
 
             if (stockResponse == null)
             {

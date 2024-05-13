@@ -2,11 +2,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
-using TornBot.Database.Entities;
 using static System.Net.Mime.MediaTypeNames;
 using MySql.Data.MySqlClient;
+using TornBot.Services.Database.Entities;
 
-namespace TornBot.Database
+namespace TornBot.Services.Database
 {
     public class DatabaseContext : DbContext
     {
