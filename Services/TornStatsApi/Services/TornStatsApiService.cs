@@ -19,8 +19,11 @@
 
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 using TornBot.Exceptions;
-using TornBot.Services.ApiKeyManagement.Service;
+using TornBot.Services.Database;
+using TornBot.Services.Database.Entities;
+using TornBot.Services.TornApi.Services;
 
 namespace TornBot.Services.TornStatsApi.Services
 {
@@ -29,14 +32,140 @@ namespace TornBot.Services.TornStatsApi.Services
         private string baseUrl = "https://www.tornstats.com/api/";
 
         private readonly ILogger _logger;
-        private readonly TornStatsApiKeyService _tornStatsApiKeyService;
+        private readonly IServiceProvider _serviceProvider;
+        private readonly TornApiService _tornApiService;
 
         public TornStatsApiService(
             ILogger<TornStatsApiService> logger,
-            TornStatsApiKeyService tornStatsApiKeyService)
+            IServiceProvider serviceProvider,
+            TornApiService tornApiService)
         {
             _logger = logger;
-            _tornStatsApiKeyService = tornStatsApiKeyService;
+            _serviceProvider = serviceProvider;
+            _tornApiService = tornApiService;
+        }
+
+        /// <summary>
+        /// Adds the supplied Api key to the database
+        /// 1 API call is made to TornStats to check the key is registered their
+        /// 1 API call is made to Torn to find the key owner
+        /// </summary>
+        /// <param name="apiKey">Api Key to use</param>
+        /// <returns>void</returns>
+        /// <exception cref="ApiCallFailureException">The inner Exception should contain further information</exception>
+        /// <exception cref="UnknownException"></exception>
+        public void AddApiKey(string apiKey)
+        {
+            DatabaseContext database = _serviceProvider.GetRequiredService<DatabaseContext>();
+
+            try
+            {
+                CheckKeyIsValid(apiKey);
+                TornBot.Entities.TornPlayer tornPlayer = _tornApiService.GetPlayer(0, apiKey);
+
+                TornBot.Services.Database.Entities.TornPlayer? dbTornPlayer =
+                    database.TornPlayers.FirstOrDefault(s => s.Id == tornPlayer.Id);
+
+                if (dbTornPlayer != null)
+                {
+                    dbTornPlayer.ParseTornPlayer(tornPlayer);
+                    database.TornPlayers.Update(dbTornPlayer);
+                    database.SaveChanges();
+                    //TODO - log updated TornPlayer via AddApiKey
+                }
+                else
+                {
+                    database.TornPlayers.Add(new TornPlayer(tornPlayer));
+                    database.SaveChanges();
+                    //TODO - log added new TornPlayer via AddApiKey
+                }
+                
+                TornBot.Services.Database.Entities.ApiKeys? dbApiKeys =
+                    database.ApiKeys.FirstOrDefault(s => s.PlayerId == tornPlayer.Id);
+                bool newApiKey = false;
+
+                if (dbApiKeys == null) //add new api key
+                {
+                    dbApiKeys = new TornBot.Services.Database.Entities.ApiKeys();
+                    newApiKey = true;
+
+                    dbApiKeys.PlayerId = tornPlayer.Id;
+                    dbApiKeys.ApiKey = "";
+                }
+
+                dbApiKeys.FactionId = tornPlayer.Faction.Id;
+
+                dbApiKeys.TornStatsApiKey = apiKey;
+                dbApiKeys.TornStatsApiAddedTimestamp = DateTime.UtcNow;
+                dbApiKeys.TornStatsLastUsed = null;
+
+                if (newApiKey)
+                {
+                    database.ApiKeys.Add(dbApiKeys);
+                    database.SaveChanges();
+                    //TODO - log new key added
+                }
+                else
+                {
+                    database.ApiKeys.Update(dbApiKeys);
+                    database.SaveChanges();
+                    //TODO - log key updated
+                }
+            }
+            catch (ApiCallFailureException e)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                //TODO - Log something bad happened
+                throw new UnknownException("Something went wrong adding api key to the system", e);
+            }
+        }
+        
+        /// <summary>
+        /// Attempts to get the next Api key
+        /// </summary>
+        /// <returns>string</returns>
+        /// <exception cref="NoMoreKeysAvailableException"></exception>
+        /// <exception cref="UnknownException">Unknown error occured. Check the inner exception</exception>
+        public string GetNextKey()
+        {
+            DatabaseContext dbContext = _serviceProvider.GetRequiredService<DatabaseContext>();
+            TornBot.Services.Database.Entities.ApiKeys? dbApiKeys;
+
+            try
+            {
+                dbApiKeys = dbContext.ApiKeys //get the torn stats api key that hasnt been used for the longest
+                    .Where(s => s.TornStatsApiKey != "")
+                    .OrderBy(s => s.TornStatsLastUsed)
+                    .FirstOrDefault();
+
+                if (dbApiKeys != null)
+                {
+                    Console.WriteLine("Db torn stats api key used: " + dbApiKeys.TornStatsApiKey);
+
+                    dbApiKeys.TornStatsLastUsed = DateTime.UtcNow; //set LastUsed to now
+                    dbContext.ApiKeys.Update(dbApiKeys); //updates LastUsed 
+                    dbContext.SaveChanges();
+
+                    return dbApiKeys.TornStatsApiKey;
+                }
+                else
+                {
+                    // TODO - Log we ran out of keys
+                    throw new NoMoreKeysAvailableException("No valid key found");
+                }
+            }
+            catch (NoMoreKeysAvailableException e)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                // TODO - You can log the exception or handle it as needed
+                throw new UnknownException("Error fetching TornStats API key from DB", e);
+            }
         }
 
         /// <summary>
@@ -75,12 +204,40 @@ namespace TornBot.Services.TornStatsApi.Services
             throw messageElement.GetString() switch
             {
                 "ERROR: User not found." => new ApiCallFailureException("Supplied API key is invalid", new InvalidKeyException()),
+                "Something wrong with the API Call. Error code: Incorrect key" => new ApiCallFailureException( "Supplied API key is invalid", new InvalidKeyException()),
                 "Error: No data found." => new ApiCallFailureException("Spy not found", new PlayerNotFoundException()),
                 _ => new ApiCallFailureException( "Unknown Exception", new UnknownException(String.Format("TornState API Error Message: {0}", messageElement.GetString())))
             };
 
         }
 
+        /// <summary>
+        /// Attempt to get the check the supplied key is valid within TornStats
+        /// </summary>
+        /// <param name="apiKey">Api key to check</param>
+        /// <returns>boolean</returns>
+        /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
+        public Boolean CheckKeyIsValid(string apiKey)
+        {
+            string url = String.Format("v2/{0}/", apiKey);
+            
+            try
+            {   
+                MakeApiRequest(url);
+                
+                return true;
+            }
+            catch (ApiCallFailureException)
+            {
+                throw;
+            }
+            catch (Exception e)
+            {
+                //TODO log this correctly
+                throw new ApiCallFailureException("Error calling TornStats", e);
+            }
+        }
+        
         /// <summary>
         /// Attempt to get the Player's BattleStats from TornStats' API
         /// Will use the next available API key from the key store
@@ -97,10 +254,9 @@ namespace TornBot.Services.TornStatsApi.Services
 
                 try
                 {
-                    key = _tornStatsApiKeyService.GetNextKey();
+                    key = GetNextKey();
                     
                     return GetPlayerStats(playerIdOrName, key);
-
                 }
                 catch (ApiCallFailureException e)
                 {
@@ -115,7 +271,6 @@ namespace TornBot.Services.TornStatsApi.Services
                         {
                             throw;
                         }
-
                     }
                 }
                 catch (Exception e)
@@ -155,7 +310,6 @@ namespace TornBot.Services.TornStatsApi.Services
                 //TODO log this correctly
                 throw new ApiCallFailureException("Error deserializing TornStats spy data", e);
             }
-
         }
     }
 }
