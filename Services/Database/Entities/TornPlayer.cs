@@ -47,12 +47,9 @@ namespace TornBot.Services.Database.Entities
             Faction_ID = tornPlayer.Faction.Id;
             LastUpdated = DateTime.UtcNow;
         }
-
-        // Used for updates.
-        // For TornPlayers, we dont actually need this constructor as the DB id (primary key) is actually the tornPlayer.id but its how we do it for the other DB entites
-        public TornPlayer(UInt32 id, TornBot.Entities.TornPlayer tornPlayer)
+        
+        public void ParseTornPlayer(TornBot.Entities.TornPlayer tornPlayer)
         {
-            Id = id;
             Name = tornPlayer.Name;
             Level = tornPlayer.Level;
             Faction_Name = tornPlayer.Faction.Name;

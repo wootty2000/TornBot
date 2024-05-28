@@ -36,6 +36,7 @@ namespace TornBot.Services.Players.Service
         private DatabaseContext _database;
         private TornApiService _torn;
         private TornStatsApiService _tornStats;
+        
         public PlayersService(
             DatabaseContext database,
             TornApiService torn,
@@ -47,54 +48,6 @@ namespace TornBot.Services.Players.Service
             _torn = torn;
             _tornStats = tornStats;
             _config = config;
-        }
-        
-        public string AddApiKey(string api_key)
-        {
-            
-            Entities.ApiKeys apiKeyInfo;
-            apiKeyInfo = _torn.GetApiKeyInfo(api_key);
-            if (apiKeyInfo != null)
-            {
-                Entities.TornPlayer user = _torn.GetApiKeyUser(api_key);
-                apiKeyInfo.PlayerId = user.Id;
-                apiKeyInfo.FactionId = user.Faction.Id;
-                apiKeyInfo.ApiKey = api_key;
-            }
-            //add api key with info to database
-            if (apiKeyInfo != null && apiKeyInfo.PlayerId > 0)
-            {
-                UInt32 factionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
-                if (apiKeyInfo.FactionId != factionId)  //it is outside api key
-                {
-                    apiKeyInfo.AccessLevel = 6;
-                }
-
-                Services.Database.Entities.ApiKeys? dbPlayer = _database.ApiKeys.Where(s => s.PlayerId == apiKeyInfo.PlayerId).FirstOrDefault();
-                if (dbPlayer == null)   //add new api key
-                {
-                    apiKeyInfo.TornApiAddedTimestamp = DateTime.UtcNow;
-                    //apiKeyInfo.TornStatsApiAddedTimestamp = null;
-                    apiKeyInfo.TornStatsLastUsed = null;
-                    apiKeyInfo.TornStatsApiKey = "";
-                    _database.ApiKeys.Add(new Services.Database.Entities.ApiKeys(apiKeyInfo));
-                    _database.SaveChanges();
-                    return "Api key has been added successfully";
-                }
-                else    //update existing api key
-                {
-                    apiKeyInfo.TornApiAddedTimestamp = DateTime.UtcNow;
-                    apiKeyInfo.TornStatsApiKey = dbPlayer.TornStatsApiKey;
-                    
-                    _database.Entry(dbPlayer).State = EntityState.Detached;     // Detach the entity
-                    _database.ApiKeys.Update(new Services.Database.Entities.ApiKeys(apiKeyInfo));
-                    _database.SaveChanges();
-                    return "Api key has been updated successfully";
-                }
-
-            }
-            else
-                return "Error registering api key into database. Please try again";
         }
         
         /// <summary>
@@ -110,7 +63,7 @@ namespace TornBot.Services.Players.Service
             Entities.TornPlayer tornPlayer;
 
             // Lets try and get a record from the database. If there is no record, we get given a null
-            Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Id == id).FirstOrDefault();
+            Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.FirstOrDefault(s => s.Id == id);
 
             // Check what we got from the database
             if (dbPlayer == null)
@@ -140,8 +93,8 @@ namespace TornBot.Services.Players.Service
                 try
                 {
                     tornPlayer = _torn.GetPlayer(id);
-                    
-                    _database.TornPlayers.Update(new Services.Database.Entities.TornPlayer(dbPlayer.Id, tornPlayer));
+                    dbPlayer.ParseTornPlayer(tornPlayer);
+                    _database.TornPlayers.Update(dbPlayer);
                     _database.SaveChanges();
 
                     return tornPlayer;

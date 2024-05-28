@@ -19,19 +19,16 @@ namespace TornBot.Services.TornApi.Entities
         
         [JsonPropertyName("selections")]
         public Selections Selections { get; set; }
-
-        [JsonPropertyName("player_id")]
-        public UInt16 PlayerId { get; set; }
-
-        public TornBot.Entities.ApiKeys ToApiKey()
+        
+        public TornBot.Entities.KeyInfo ToKeyInfo(string apiKey)
         {
-            TornBot.Entities.ApiKeys apiKey = new TornBot.Entities.ApiKeys();
+            TornBot.Entities.KeyInfo keyInfo = new TornBot.Entities.KeyInfo();
 
-            apiKey.AccessLevel = this.AccessLevel;
-            apiKey.AccessType = this.AccessType;
-            apiKey.PlayerId = this.PlayerId;
+            keyInfo.Key = apiKey;
+            keyInfo.TornAccessLevel = AccessLevel;
+            keyInfo.SelectionFaction = Selections.Faction;
 
-            return apiKey;
+            return keyInfo;
         }
     }
     

@@ -18,62 +18,15 @@ namespace TornBot.Services.Database.Entities
         public UInt32 FactionId { get; set; }
 
         public UInt16 AccessLevel { get; set; }
-        public string AccessType { get; set; }
 
         public String ApiKey { get; set; }
-        public String TornStatsApiKey { get; set; }
+        public String? TornStatsApiKey { get; set; }
 
         public DateTime? TornApiAddedTimestamp { get; set; }
         public DateTime? TornStatsApiAddedTimestamp { get; set; }
 
         public DateTime? TornLastUsed { get; set; }
         public DateTime? TornStatsLastUsed { get; set; }
-
-        public ApiKeys() { }
         
-        public ApiKeys(TornBot.Entities.ApiKeys apiKeys) //add api key or update it for torn
-        {
-            PlayerId = apiKeys.PlayerId;
-            FactionId = apiKeys.FactionId;
-            AccessLevel = apiKeys.AccessLevel;
-            AccessType = apiKeys.AccessType;
-            ApiKey = apiKeys.ApiKey;
-            TornStatsApiKey = apiKeys.TornStatsApiKey;
-            TornApiAddedTimestamp = apiKeys.TornApiAddedTimestamp; 
-            //TornStatsApiAddedTimestamp = apiKeys.TornStatsApiAddedTimestamp;
-            TornLastUsed = DateTime.UtcNow;
-            TornStatsLastUsed = apiKeys.TornStatsLastUsed;
-        }
-        /*
-        public ApiKeys(TornBot.Entities.ApiKeys apiKeys) //add api key or update it for tornStats
-        {
-            PlayerId = apiKeys.PlayerId;
-            FactionId = apiKeys.FactionId;
-            AccessLevel = apiKeys.AccessLevel;
-            AccessType = apiKeys.AccessType;
-            ApiKey = apiKeys.ApiKey;
-            TornStatsApiKey = apiKeys.TornStatsApiKey;
-            TornApiAddedTimestamp = apiKeys.TornApiAddedTimestamp; //being passed in case we just want to use the api key and not add/update
-            TornStatsApiAddedTimestamp = apiKeys.TornStatsApiAddedTimestamp;
-            TornLastUsed = apiKeys.TornLastUsed;
-            TornStatsLastUsed = DateTime.UtcNow;
-        }*/
-
-        public TornBot.Entities.ApiKeys ToApiKey()
-        {
-            TornBot.Entities.ApiKeys apiKeys = new TornBot.Entities.ApiKeys();
-            apiKeys.PlayerId = PlayerId;
-            apiKeys.FactionId = FactionId;
-            apiKeys.AccessLevel = AccessLevel;
-            apiKeys.AccessType = AccessType;
-            apiKeys.ApiKey = ApiKey;
-            apiKeys.TornStatsApiKey = TornStatsApiKey;
-            apiKeys.TornApiAddedTimestamp = TornApiAddedTimestamp;
-            //apiKeys.TornStatsApiAddedTimestamp = TornStatsApiAddedTimestamp;
-            apiKeys.TornLastUsed = TornLastUsed;
-            apiKeys.TornStatsLastUsed = TornStatsLastUsed;
-
-            return apiKeys;
-        }
     }
 }

@@ -66,14 +66,14 @@ namespace TornBot.Features.GetPlayerStats.Discord
                 else
                     message = "Unknown error getting Battle Stats. Please try again later";
                 
-                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(message));
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(message));
                 return;
             }
             catch (Exception e)
             {
                 string message = "Unknown error getting Battle Stats. Please try again later";
                 
-                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(message));
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(message));
                 return;
             }
 
@@ -105,7 +105,7 @@ namespace TornBot.Features.GetPlayerStats.Discord
             {
                 string message = "Unknown error getting Battle Stats. Please try again later";
                 
-                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(message));
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(message));
                 return;
             }
             
