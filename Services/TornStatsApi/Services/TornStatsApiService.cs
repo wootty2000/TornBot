@@ -33,6 +33,7 @@ namespace TornBot.Services.TornStatsApi.Services
 
         private readonly ILogger _logger;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IServiceProvider _serviceProviderScoped;
         private readonly TornApiService _tornApiService;
 
         public TornStatsApiService(
@@ -43,6 +44,8 @@ namespace TornBot.Services.TornStatsApi.Services
             _logger = logger;
             _serviceProvider = serviceProvider;
             _tornApiService = tornApiService;
+
+            _serviceProviderScoped = serviceProvider.CreateScope().ServiceProvider;
         }
 
         /// <summary>
@@ -56,7 +59,7 @@ namespace TornBot.Services.TornStatsApi.Services
         /// <exception cref="UnknownException"></exception>
         public void AddApiKey(string apiKey)
         {
-            DatabaseContext database = _serviceProvider.GetRequiredService<DatabaseContext>();
+            DatabaseContext database = _serviceProviderScoped.GetRequiredService<DatabaseContext>();
 
             try
             {
@@ -131,7 +134,7 @@ namespace TornBot.Services.TornStatsApi.Services
         /// <exception cref="UnknownException">Unknown error occured. Check the inner exception</exception>
         public string GetNextKey()
         {
-            DatabaseContext dbContext = _serviceProvider.GetRequiredService<DatabaseContext>();
+            DatabaseContext dbContext = _serviceProviderScoped.GetRequiredService<DatabaseContext>();
             TornBot.Services.Database.Entities.ApiKeys? dbApiKeys;
 
             try

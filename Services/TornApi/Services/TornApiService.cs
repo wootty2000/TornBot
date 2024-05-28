@@ -32,6 +32,7 @@ namespace TornBot.Services.TornApi.Services
 
         private readonly IConfigurationRoot _config;
         private readonly IServiceProvider _serviceProvider;
+        private readonly IServiceProvider _serviceProviderScoped;
 
         private const byte AccessLevelPublic   = 0b00000001;
         private const byte AccessLevelMinimal  = 0b00000010;
@@ -81,6 +82,8 @@ namespace TornBot.Services.TornApi.Services
         {
             _config = config;
             _serviceProvider = serviceProvider;
+
+            _serviceProviderScoped = serviceProvider.CreateScope().ServiceProvider;
         }
 
         
@@ -95,7 +98,7 @@ namespace TornBot.Services.TornApi.Services
         /// <exception cref="UnknownException"></exception>
         public void AddApiKey(string apiKey)
         {
-            DatabaseContext database = _serviceProvider.GetRequiredService<DatabaseContext>(); 
+            DatabaseContext database = _serviceProviderScoped.GetRequiredService<DatabaseContext>(); 
             
             try
             {
@@ -196,7 +199,7 @@ namespace TornBot.Services.TornApi.Services
         /// <exception cref="UnknownException">Unknown error occured. Check the inner exception</exception>
         public string GetNextKey(AccessLevel accessLevel)
         {
-            DatabaseContext dbContext = _serviceProvider.GetRequiredService<DatabaseContext>();
+            DatabaseContext dbContext = _serviceProviderScoped.GetRequiredService<DatabaseContext>();
             TornBot.Services.Database.Entities.ApiKeys? dbApiKeys;
 
             try
