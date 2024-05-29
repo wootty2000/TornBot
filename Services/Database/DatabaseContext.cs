@@ -74,11 +74,21 @@ namespace TornBot.Services.Database
                         if (!fileName.EndsWith(".sql"))
                             continue;
 
+                        try
+                        {
+                            var migration = dbContext.Migrations.Where(mig => mig.Name == fileName).ToList();
+                            if (migration.Count > 0)
+                                continue;
+                        }
+                        catch (Exception e)
+                        {
+                            //If the initial db create has not run yet, the check will fail. Just ignore as it will create
+                            //the migrations table first
+                            if (e.Message != "Table 'tornbot.Migrations' doesn't exist")
+                                throw;
+                        }
+                        
                         //Skip any files that have already been applied
-                        var migration = dbContext.Migrations.Where(mig => mig.Name == fileName).ToList();
-                        if (migration.Count > 0)
-                            continue;
-
                         var sql = System.IO.File.ReadAllText(fileName);
                         string[] commands = sql.Split(new string[] { "GO" }, StringSplitOptions.RemoveEmptyEntries);
                         
