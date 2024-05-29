@@ -5,6 +5,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+	<!--PublishSingleFile>true</PublishSingleFile>
+	<SelfContained>true</SelfContained-->
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,12 +37,15 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="sql\" />
+	</ItemGroup>
+
   <ItemGroup>
-    <Folder Include="Features\GetPlayerStats\Discord\" />
-    <Folder Include="Features\InactivePlayerMonitor\Cron\" />
-    <Folder Include="Features\ReviveMonitor\Command\" />
-    <Folder Include="Features\StocksMonitor\Cron\" />
-    <Folder Include="Services\TornBotWeb\Web\" />
+    <Content Include="Migrations\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>sql\%(RecursiveDir)%(Filename)%(Extension)</Link>
+    </Content>
   </ItemGroup>
 
 </Project>
