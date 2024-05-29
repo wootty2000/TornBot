@@ -76,6 +76,7 @@ namespace TornBot.Services.Database
 
                         try
                         {
+                            //Skip any files that have already been applied
                             var migration = dbContext.Migrations.Where(mig => mig.Name == fileName).ToList();
                             if (migration.Count > 0)
                                 continue;
@@ -88,7 +89,6 @@ namespace TornBot.Services.Database
                                 throw;
                         }
                         
-                        //Skip any files that have already been applied
                         var sql = System.IO.File.ReadAllText(fileName);
                         string[] commands = sql.Split(new string[] { "GO" }, StringSplitOptions.RemoveEmptyEntries);
                         
