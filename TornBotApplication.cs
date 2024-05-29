@@ -48,13 +48,16 @@ namespace TornBot
             //Get the database setup
             DatabaseContext.Init(config, services);
 
+            //Load all the migrations
+            DatabaseContext.RunMigrations(services.BuildServiceProvider());
+             
             // RegisterModules will find all the IModule modules and call the module's RegisterModule function
             ModuleExtensions.RegisterModules(services); 
 
             serviceProvider = services.BuildServiceProvider();
 
             //Lets get it built
-                app = builder.Build();
+            app = builder.Build();
             
             await RunAsync(app);
         }

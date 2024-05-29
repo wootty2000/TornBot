@@ -26,5 +26,10 @@ namespace TornBot.Services.Database.Entities
         public string Name { get; set; }
         public DateTime RunAt { get; set; }
 
+        public Migrations(string name, DateTime runAt)
+        {
+            this.Name = name;
+            this.RunAt = runAt;
+        }
     }
 }
