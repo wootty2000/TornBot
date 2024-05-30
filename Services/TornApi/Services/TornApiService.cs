@@ -81,7 +81,12 @@ namespace TornBot.Services.TornApi.Services
             /* 0b10001000 */ OutsiderFull = AccessLevelOutsider | AccessLevelFull
         }
 
-        
+        private enum TornState
+        {
+            Ok = 1,
+            Inactive = 2,
+            Invalid = 3
+        }
         
         public TornApiService(IConfigurationRoot config, IServiceProvider serviceProvider)
         {
@@ -95,6 +100,11 @@ namespace TornBot.Services.TornApi.Services
             _keyCallTimestamps = new ConcurrentDictionary<string, Queue<DateTime>>();
         }
 
+        /// <summary>
+        /// Checks and applies rate limiting to the supplied Api Key 
+        /// </summary>
+        /// <param name="apiKey">Api Key to check</param>
+        /// <returns>bool</returns>
         private bool CheckRateLimit(string apiKey)
         {
             // Check if timestamps queue exists for the key
@@ -159,7 +169,7 @@ namespace TornBot.Services.TornApi.Services
 
                 //add api key with info to database
                 UInt32 homeFactionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
-
+                
                 KeyAccessLevel keyAccessLevel = apiKeyInfo.TornAccessLevel switch
                 {
                     1 => KeyAccessLevel.Public,
@@ -193,14 +203,15 @@ namespace TornBot.Services.TornApi.Services
                     dbApiKeys.PlayerId = tornPlayer.Id;
                     dbApiKeys.TornStatsApiKey = "";
                 }
-
+                
                 dbApiKeys.FactionId = tornPlayer.Faction.Id;
 
-                dbApiKeys.ApiKey = apiKey;
-                dbApiKeys.AccessLevel = (byte)keyAccessLevel;
-                dbApiKeys.TornApiAddedTimestamp = DateTime.UtcNow;
+                dbApiKeys.TornApiKey = apiKey;
+                dbApiKeys.TornAccessLevel = (byte)keyAccessLevel;
+                dbApiKeys.TornState = (byte)TornState.Ok;
                 dbApiKeys.TornLastUsed = null;
-
+                dbApiKeys.TornApiAddedTimestamp = DateTime.UtcNow;
+                
                 if (newApiKey)
                 {
                     database.ApiKeys.Add(dbApiKeys);
@@ -239,16 +250,15 @@ namespace TornBot.Services.TornApi.Services
 
             try
             {
-                int loopCounter = 0;
-
                 //If we are not asked for an outsider key, do not offer outsider keys
                 if (((byte)accessLevel & 0b1000000) == 0)
                 {
                     dbApiKeys = dbContext.ApiKeys //get the api key that hasnt been used for the longest
                         .Where(s =>
-                            s.ApiKey != "" &&
-                            ((s.AccessLevel & (byte)accessLevel) == (byte)accessLevel) &&
-                            ((s.AccessLevel & 0b10000000) == 0)
+                            s.TornApiKey != "" &&
+                            s.TornState == (byte)TornState.Ok &&
+                            ((s.TornAccessLevel & (byte)accessLevel) == (byte)accessLevel) &&
+                            ((s.TornAccessLevel & 0b10000000) == 0)
                         )
                         .OrderBy(s => s.TornLastUsed)
                         .ToList();
@@ -256,7 +266,10 @@ namespace TornBot.Services.TornApi.Services
                 else
                 {
                     dbApiKeys = dbContext.ApiKeys //get the api key that hasnt been used for the longest
-                        .Where(s => (s.AccessLevel & (byte)accessLevel) == (byte)accessLevel)
+                        .Where(s => 
+                            s.TornApiKey != "" &&
+                            s.TornState == (byte)TornState.Ok &&
+                            (s.TornAccessLevel & (byte)accessLevel) == (byte)accessLevel)
                         .OrderBy(s => s.TornLastUsed)
                         .ToList();
                 }
@@ -266,7 +279,7 @@ namespace TornBot.Services.TornApi.Services
                     foreach (TornBot.Services.Database.Entities.ApiKeys dbApiKey in dbApiKeys)
                     {
                         //If the key has been rate limited, continue the next key
-                        if (!CheckRateLimit(dbApiKey.ApiKey))
+                        if (!CheckRateLimit(dbApiKey.TornApiKey))
                         {
                             //TODO - Log that a key was rate limited. 
                             continue;
@@ -276,7 +289,7 @@ namespace TornBot.Services.TornApi.Services
                         dbContext.ApiKeys.Update(dbApiKey); //updates LastUsed 
                         dbContext.SaveChanges();
 
-                        return dbApiKey.ApiKey;
+                        return dbApiKey.TornApiKey;
                     }
                     
                     //If we got here, there are no more keys available
@@ -303,6 +316,40 @@ namespace TornBot.Services.TornApi.Services
             }
         }
 
+        /// <summary>
+        /// Marks the supplied Api Key as Invalid. 
+        /// </summary>
+        /// <param name="apiKey">Api Key to use</param>
+        /// <returns>void</returns>
+        private void MarkApiKeyInvalid(string apiKey)
+        {
+            DatabaseContext dbContext = _serviceProviderScoped.GetRequiredService<DatabaseContext>();
+
+            TornBot.Services.Database.Entities.ApiKeys dbApiKeys = dbContext.ApiKeys
+                .First(s => s.TornApiKey == apiKey);
+
+            dbApiKeys.TornState = (byte)TornState.Invalid;
+            dbContext.ApiKeys.Update(dbApiKeys);
+            dbContext.SaveChanges();
+        }
+        
+        /// <summary>
+        /// Marks the supplied Api Key as Invalid. 
+        /// </summary>
+        /// <param name="apiKey">Api Key to use</param>
+        /// <returns>void</returns>
+        private void MarkApiKeyInactive(string apiKey)
+        {
+            DatabaseContext dbContext = _serviceProviderScoped.GetRequiredService<DatabaseContext>();
+
+            TornBot.Services.Database.Entities.ApiKeys dbApiKeys = dbContext.ApiKeys
+                .First(s => s.TornApiKey == apiKey);
+
+            dbApiKeys.TornState = (byte)TornState.Inactive;
+            dbContext.ApiKeys.Update(dbApiKeys);
+            dbContext.SaveChanges();
+        }
+        
         /// <summary>
         /// Makes the actual GET request to Torn's API
         /// </summary>
@@ -362,7 +409,7 @@ namespace TornBot.Services.TornApi.Services
             //Loop until we get a valid response or run out of API keys or a other API call failure
             while (true)
             {
-                string key;
+                string key = null;
 
                 try
                 {
@@ -376,12 +423,13 @@ namespace TornBot.Services.TornApi.Services
                     {
                         if (e.InnerException is InvalidKeyException)
                         {
-                            //TODO mark the key as invalid in the key store
+                            MarkApiKeyInvalid(key!);
                             continue;
                         } 
                         else if (e.InnerException is ApiKeyOwnerInactiveException)
                         {
                             //TODO mark the key as owner inactive in the key store
+                            MarkApiKeyInactive(key!);
                             continue;
                         }
                         else
@@ -440,7 +488,7 @@ namespace TornBot.Services.TornApi.Services
             //Loop until we get a valid response or run out of API keys or a other API call failure
             while (true)
             {
-                string key;
+                string key = null;
                 
                 try
                 {
@@ -454,12 +502,12 @@ namespace TornBot.Services.TornApi.Services
                     {
                         if (e.InnerException is InvalidKeyException)
                         {
-                            //TODO mark the key as invalid in the key store
+                            MarkApiKeyInvalid(key!);
                             continue;
                         } 
                         else if (e.InnerException is ApiKeyOwnerInactiveException)
                         {
-                            //TODO mark the key as owner inactive in the key store
+                            MarkApiKeyInactive(key!);
                             continue;
                         }
                         else
@@ -515,7 +563,7 @@ namespace TornBot.Services.TornApi.Services
             //Loop until we get a valid response or run out of API keys or a other API call failure
             while (true)
             {
-                string key;
+                string key = null;
                 
                 try
                 {
@@ -529,12 +577,12 @@ namespace TornBot.Services.TornApi.Services
                     {
                         if (e.InnerException is InvalidKeyException)
                         {
-                            //TODO mark the key as invalid in the key store
+                            MarkApiKeyInvalid(key!);
                             continue;
                         } 
                         else if (e.InnerException is ApiKeyOwnerInactiveException)
                         {
-                            //TODO mark the key as owner inactive in the key store
+                            MarkApiKeyInactive(key!);
                             continue;
                         }
                         else
