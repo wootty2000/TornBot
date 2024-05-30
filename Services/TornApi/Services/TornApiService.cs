@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +35,10 @@ namespace TornBot.Services.TornApi.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly IServiceProvider _serviceProviderScoped;
 
+        private readonly int _rateLimitPerMinutePerKey;
+        private readonly TimeSpan _rateLimitWindow;
+        private readonly ConcurrentDictionary<string, Queue<DateTime>> _keyCallTimestamps;
+        
         private const byte AccessLevelPublic   = 0b00000001;
         private const byte AccessLevelMinimal  = 0b00000010;
         private const byte AccessLevelLimited  = 0b00000100;
@@ -84,9 +89,39 @@ namespace TornBot.Services.TornApi.Services
             _serviceProvider = serviceProvider;
 
             _serviceProviderScoped = serviceProvider.CreateScope().ServiceProvider;
+
+            _rateLimitPerMinutePerKey = 10;
+            _rateLimitWindow = TimeSpan.FromSeconds(60);
+            _keyCallTimestamps = new ConcurrentDictionary<string, Queue<DateTime>>();
         }
 
-        
+        private bool CheckRateLimit(string apiKey)
+        {
+            // Check if timestamps queue exists for the key
+            if (!_keyCallTimestamps.TryGetValue(apiKey, out var timestamps))
+            {
+                // Create a new queue for this key
+                timestamps = new Queue<DateTime>(10);
+                _keyCallTimestamps.TryAdd(apiKey, timestamps);
+            }
+            
+            // Remove timestamps older than 60 seconds
+            while (timestamps.Count > 0 && timestamps.Peek() < DateTime.UtcNow.Subtract(_rateLimitWindow))
+            {
+                timestamps.Dequeue();
+            }
+
+            // Check if we are over the rate limit
+            if (timestamps.Count >= _rateLimitPerMinutePerKey)
+                return false;
+            
+            // Enqueue current timestamp
+            timestamps.Enqueue(DateTime.UtcNow);
+
+            // Must be good
+            return true;
+        }
+
         /// <summary>
         /// Adds the supplied Api key to the database
         /// 2 API calls are made to Torn.
@@ -200,55 +235,71 @@ namespace TornBot.Services.TornApi.Services
         public string GetNextKey(AccessLevel accessLevel)
         {
             DatabaseContext dbContext = _serviceProviderScoped.GetRequiredService<DatabaseContext>();
-            TornBot.Services.Database.Entities.ApiKeys? dbApiKeys;
+            List<TornBot.Services.Database.Entities.ApiKeys> dbApiKeys;
 
             try
             {
+                int loopCounter = 0;
+
                 //If we are not asked for an outsider key, do not offer outsider keys
-                if(((byte)accessLevel & 0b1000000) == 0)
+                if (((byte)accessLevel & 0b1000000) == 0)
                 {
                     dbApiKeys = dbContext.ApiKeys //get the api key that hasnt been used for the longest
-                        .Where(s => 
+                        .Where(s =>
                             s.ApiKey != "" &&
-                            ((s.AccessLevel & (byte)accessLevel) == (byte)accessLevel) && 
-                            ((s.AccessLevel & 0b10000000) == 0 )
+                            ((s.AccessLevel & (byte)accessLevel) == (byte)accessLevel) &&
+                            ((s.AccessLevel & 0b10000000) == 0)
                         )
                         .OrderBy(s => s.TornLastUsed)
-                        .FirstOrDefault();
+                        .ToList();
                 }
                 else
                 {
                     dbApiKeys = dbContext.ApiKeys //get the api key that hasnt been used for the longest
                         .Where(s => (s.AccessLevel & (byte)accessLevel) == (byte)accessLevel)
                         .OrderBy(s => s.TornLastUsed)
-                        .FirstOrDefault();
+                        .ToList();
                 }
-                
-                if (dbApiKeys != null)
-                {
-                    Console.WriteLine("Db api key used: " + dbApiKeys.ApiKey);
 
-                    dbApiKeys.TornLastUsed = DateTime.UtcNow;
+                if (dbApiKeys.Count > 0)
+                {
+                    foreach (TornBot.Services.Database.Entities.ApiKeys dbApiKey in dbApiKeys)
+                    {
+                        //If the key has been rate limited, continue the next key
+                        if (!CheckRateLimit(dbApiKey.ApiKey))
+                        {
+                            //TODO - Log that a key was rate limited. 
+                            continue;
+                        }
+                        
+                        dbApiKey.TornLastUsed = DateTime.UtcNow;
+                        dbContext.ApiKeys.Update(dbApiKey); //updates LastUsed 
+                        dbContext.SaveChanges();
+
+                        return dbApiKey.ApiKey;
+                    }
                     
-                    dbContext.ApiKeys.Update(dbApiKeys); //updates LastUsed 
-                    dbContext.SaveChanges();
-                    
-                    return dbApiKeys.ApiKey;
+                    //If we got here, there are no more keys available
+                    throw new AllKeysRateLimitedException("All available key are rate limited");
                 }
                 else
                 {
-                    // TODO - Log we ran out of keys
+                    // TODO - No keys available
                     throw new NoMoreKeysAvailableException("No valid key found");
                 }
             }
-            catch (NoMoreKeysAvailableException e)
+            catch (AllKeysRateLimitedException)
+            {
+                throw;
+            }
+            catch (NoMoreKeysAvailableException)
             {
                 throw;
             }
             catch (Exception e)
             {
                 // TODO - You can log the exception or handle it as needed
-                throw new UnknownException("Error fetching TornStats API key from DB", e);
+                throw new UnknownException("Error fetching Torn API key from DB", e);
             }
         }
 

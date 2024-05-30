@@ -42,7 +42,7 @@
 	</ItemGroup>
 
   <ItemGroup>
-    <Content Include="Migrations\*">
+    <Content Include="Migrations\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>sql\%(RecursiveDir)%(Filename)%(Extension)</Link>
     </Content>
