@@ -16,17 +16,16 @@ namespace TornBot.Services.Database.Entities
         [Key]
         public UInt32 PlayerId { get; set; }
         public UInt32 FactionId { get; set; }
-
-        public UInt16 AccessLevel { get; set; }
-
-        public String ApiKey { get; set; }
-        public String? TornStatsApiKey { get; set; }
-
-        public DateTime? TornApiAddedTimestamp { get; set; }
-        public DateTime? TornStatsApiAddedTimestamp { get; set; }
-
+        
+        public String TornApiKey { get; set; }
+        public UInt16 TornAccessLevel { get; set; }
+        public UInt16 TornState { get; set; }
         public DateTime? TornLastUsed { get; set; }
+        public DateTime? TornApiAddedTimestamp { get; set; }
+        
+        public String? TornStatsApiKey { get; set; }
         public DateTime? TornStatsLastUsed { get; set; }
+        public DateTime? TornStatsApiAddedTimestamp { get; set; }
         
     }
 }
