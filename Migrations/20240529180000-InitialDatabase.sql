@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS `ApiKeys` (
     `PlayerId` int unsigned NOT NULL AUTO_INCREMENT,
     `FactionId` int unsigned NOT NULL,
     `AccessLevel` smallint unsigned NOT NULL,
-    `AccessType` longtext NOT NULL,
     `ApiKey` longtext NOT NULL,
     `TornStatsApiKey` longtext NOT NULL,
     `TornApiAddedTimestamp` datetime(6) NULL,
