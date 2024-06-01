@@ -28,8 +28,7 @@ namespace TornBot.Features.ReviveMonitor.Discord
     {
         PlayersService _players;
         
-        public RevivesCommand(
-            PlayersService players)
+        public RevivesCommand(PlayersService players)
         {
             _players = players;
         }
@@ -42,19 +41,20 @@ namespace TornBot.Features.ReviveMonitor.Discord
             await ctx.DeferAsync();
 
             //return list of players that can be revived
-            List<Entities.ReviveStatus> reviveStatus = _players.GetReviveStatus((UInt32)id);
+            //TODO Wrap in Try/catch block as GetReviveStatus can throw an exception
+            List<Entities.TornPlayer> tornPlayerList = _players.GetReviveStatus((UInt32)id, ref ctx);
 
-            if (reviveStatus.Count == 0)
+            if (tornPlayerList.Count == 0)
             {
-                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("No revivable players"));
+                await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("No revivable players"));
                 return;
             }
 
-            string allRevivablePlayers = string.Join("\n", reviveStatus.Select(rs => $"[{rs.Player.Name}](https://www.torn.com/profiles.php?XID={rs.Player.Id})"));
+            string allRevivablePlayers = string.Join("\n", tornPlayerList.Select(tornPlayer => $"[{tornPlayer.Name}](https://www.torn.com/profiles.php?XID={tornPlayer.Id})"));
 
-            string factionName = reviveStatus.FirstOrDefault().Player.Faction.Name;
-            UInt32 factionID = reviveStatus.FirstOrDefault().Player.Faction.Id;
-            string faction_tag = reviveStatus.FirstOrDefault().Player.Faction.Tag_image;
+            string factionName = tornPlayerList.FirstOrDefault().Faction.Name;
+            UInt32 factionID = tornPlayerList.FirstOrDefault().Faction.Id;
+            string faction_tag = tornPlayerList.FirstOrDefault().Faction.Tag_image;
             
             DateTime timeNow = DateTime.Now;
 
@@ -75,7 +75,6 @@ namespace TornBot.Features.ReviveMonitor.Discord
                 Description = allRevivablePlayers,
                 Footer = embedFooter,
             };
-            
 
             await ctx.EditResponseAsync(new DiscordWebhookBuilder().AddEmbed(embed));
         }

@@ -27,43 +27,23 @@ namespace TornBot.Entities
 {
     public class BattleStats
     {
-        private UInt32 playerId = 0;
+        public UInt32 PlayerId { get; set; } = 0;
 
-        private UInt64 strength = 0;
-        private DateTime strengthTimestamp = DateTime.FromFileTimeUtc(0);
+        public UInt64 Strength { get ; set; } = 0;
+        public DateTime StrengthTimestamp { get ; set; } = DateTime.FromFileTimeUtc(0);
 
-        private UInt64 defense = 0;
-        private DateTime defenseTimestamp = DateTime.FromFileTimeUtc(0);
+        public UInt64 Defense { get ; set; } = 0;
+        public DateTime DefenseTimestamp { get ; set; } = DateTime.FromFileTimeUtc(0);
 
-        private UInt64 speed = 0;
-        private DateTime speedTimestamp = DateTime.FromFileTimeUtc(0);
+        public UInt64 Speed { get ; set; } = 0;
+        public DateTime SpeedTimestamp { get ; set; } = DateTime.FromFileTimeUtc(0);
 
-        private UInt64 dexterity = 0;
-        private DateTime dexterityTimestamp = DateTime.FromFileTimeUtc(0);
+        public UInt64 Dexterity { get ; set; } = 0;
+        public DateTime DexterityTimestamp { get ; set; } = DateTime.FromFileTimeUtc(0);
 
-        private UInt64 total = 0;
-        private DateTime totalTimestamp = DateTime.FromFileTimeUtc(0);
+        public UInt64 Total { get ; set; } = 0;
+        public DateTime TotalTimestamp { get ; set; } = DateTime.FromFileTimeUtc(0);
 
-        private DateTime statsTimestamp = DateTime.FromFileTimeUtc(0);
-
-
-        public UInt32 PlayerId { get ; set; }
-
-        public UInt64 Strength { get ; set; }
-        public DateTime StrengthTimestamp { get ; set; }
-
-        public UInt64 Defense { get ; set; }
-        public DateTime DefenseTimestamp { get ; set; }
-
-        public UInt64 Speed { get ; set; }
-        public DateTime SpeedTimestamp { get ; set; }
-
-        public UInt64 Dexterity { get ; set; }
-        public DateTime DexterityTimestamp { get ; set; }
-
-        public UInt64 Total { get ; set; }
-        public DateTime TotalTimestamp { get ; set; }
-
-        public DateTime BattleStatsTimestamp { get ; set; }
+        public DateTime BattleStatsTimestamp { get ; set; } = DateTime.FromFileTimeUtc(0);
     }
 }

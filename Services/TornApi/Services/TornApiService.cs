@@ -33,7 +33,6 @@ namespace TornBot.Services.TornApi.Services
 
         private readonly IConfigurationRoot _config;
         private readonly IServiceProvider _serviceProvider;
-        private readonly IServiceProvider _serviceProviderScoped;
 
         private readonly int _rateLimitPerMinutePerKey;
         private readonly TimeSpan _rateLimitWindow;
@@ -92,9 +91,7 @@ namespace TornBot.Services.TornApi.Services
         {
             _config = config;
             _serviceProvider = serviceProvider;
-
-            _serviceProviderScoped = serviceProvider.CreateScope().ServiceProvider;
-
+            
             _rateLimitPerMinutePerKey = 10;
             _rateLimitWindow = TimeSpan.FromSeconds(60);
             _keyCallTimestamps = new ConcurrentDictionary<string, Queue<DateTime>>();
@@ -143,15 +140,15 @@ namespace TornBot.Services.TornApi.Services
         /// <exception cref="UnknownException"></exception>
         public void AddApiKey(string apiKey)
         {
-            DatabaseContext database = _serviceProviderScoped.GetRequiredService<DatabaseContext>(); 
-            
             try
             {
+                using IServiceScope serviceProviderScoped = _serviceProvider.CreateScope();
+                using DatabaseContext database = serviceProviderScoped.ServiceProvider.GetRequiredService<DatabaseContext>();
+                
                 TornBot.Entities.KeyInfo apiKeyInfo = GetApiKeyInfo(apiKey);
                 TornBot.Entities.TornPlayer tornPlayer = GetPlayer(0, apiKey);
 
-                TornBot.Services.Database.Entities.TornPlayer? dbTornPlayer =
-                    database.TornPlayers.FirstOrDefault(s => s.Id == tornPlayer.Id);
+                TornBot.Services.Database.Entities.TornPlayer? dbTornPlayer = database.TornPlayers.FirstOrDefault(s => s.Id == tornPlayer.Id);
 
                 if (dbTornPlayer != null)
                 {
@@ -169,28 +166,9 @@ namespace TornBot.Services.TornApi.Services
 
                 //add api key with info to database
                 UInt32 homeFactionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
+
+                KeyAccessLevel keyAccessLevel = CalculateKeyAccessLevel(apiKeyInfo, tornPlayer.Faction.Id, homeFactionId);
                 
-                KeyAccessLevel keyAccessLevel = apiKeyInfo.TornAccessLevel switch
-                {
-                    1 => KeyAccessLevel.Public,
-                    2 => KeyAccessLevel.Minimal,
-                    3 => KeyAccessLevel.Limited,
-                    4 => KeyAccessLevel.Full,
-                    _ => throw new ApiKeyAccessLevelNotSupportedException(
-                        "The supplied key access level is not supported")
-                };
-
-                //Factions -> Applications needs a minimum of Faction enabled Minimal key
-                if (apiKeyInfo.SelectionFaction.Contains("applications"))
-                {
-                    keyAccessLevel = (KeyAccessLevel)(AccessLevelFaction | (byte)keyAccessLevel);
-                }
-
-                if (tornPlayer.Faction.Id != homeFactionId) //it is outside api key
-                {
-                    keyAccessLevel = (KeyAccessLevel)(AccessLevelOutsider | (byte)keyAccessLevel);
-                }
-
                 TornBot.Services.Database.Entities.ApiKeys? dbApiKeys =
                     database.ApiKeys.Where(s => s.PlayerId == tornPlayer.Id).FirstOrDefault();
                 bool newApiKey = false;
@@ -224,6 +202,7 @@ namespace TornBot.Services.TornApi.Services
                     database.SaveChanges();
                     //TODO - log key updated
                 }
+                
             }
             catch (ApiCallFailureException e)
             {
@@ -235,6 +214,32 @@ namespace TornBot.Services.TornApi.Services
                 throw new UnknownException("Something went wrong adding api key to the system", e);
             }
         }
+
+        private KeyAccessLevel CalculateKeyAccessLevel(TornBot.Entities.KeyInfo apiKeyInfo, UInt32 playerFactionId, UInt32 homeFactionId)
+        {
+            KeyAccessLevel keyAccessLevel = apiKeyInfo.TornAccessLevel switch
+            {
+                1 => KeyAccessLevel.Public,
+                2 => KeyAccessLevel.Minimal,
+                3 => KeyAccessLevel.Limited,
+                4 => KeyAccessLevel.Full,
+                _ => throw new ApiKeyAccessLevelNotSupportedException(
+                    "The supplied key access level is not supported")
+            };
+
+            //Factions -> Applications needs a minimum of Faction enabled Minimal key
+            if (apiKeyInfo.SelectionFaction.Contains("applications"))
+            {
+                keyAccessLevel = (KeyAccessLevel)(AccessLevelFaction | (byte)keyAccessLevel);
+            }
+
+            if (playerFactionId != homeFactionId) //it is outside api key
+            {
+                keyAccessLevel = (KeyAccessLevel)(AccessLevelOutsider | (byte)keyAccessLevel);
+            }
+
+            return keyAccessLevel;
+        }
         
         /// <summary>
         /// Attempts to get the next Api key for the required Access Level
@@ -245,11 +250,13 @@ namespace TornBot.Services.TornApi.Services
         /// <exception cref="UnknownException">Unknown error occured. Check the inner exception</exception>
         public string GetNextKey(AccessLevel accessLevel)
         {
-            DatabaseContext dbContext = _serviceProviderScoped.GetRequiredService<DatabaseContext>();
             List<TornBot.Services.Database.Entities.ApiKeys> dbApiKeys;
 
             try
             {
+                using IServiceScope serviceProviderScoped = _serviceProvider.CreateScope();
+                using DatabaseContext dbContext = serviceProviderScoped.ServiceProvider.GetRequiredService<DatabaseContext>();
+                    
                 //If we are not asked for an outsider key, do not offer outsider keys
                 if (((byte)accessLevel & 0b1000000) == 0)
                 {
@@ -266,7 +273,7 @@ namespace TornBot.Services.TornApi.Services
                 else
                 {
                     dbApiKeys = dbContext.ApiKeys //get the api key that hasnt been used for the longest
-                        .Where(s => 
+                        .Where(s =>
                             s.TornApiKey != "" &&
                             s.TornState == (byte)TornState.Ok &&
                             (s.TornAccessLevel & (byte)accessLevel) == (byte)accessLevel)
@@ -284,14 +291,14 @@ namespace TornBot.Services.TornApi.Services
                             //TODO - Log that a key was rate limited. 
                             continue;
                         }
-                        
+
                         dbApiKey.TornLastUsed = DateTime.UtcNow;
                         dbContext.ApiKeys.Update(dbApiKey); //updates LastUsed 
                         dbContext.SaveChanges();
 
                         return dbApiKey.TornApiKey;
                     }
-                    
+
                     //If we got here, there are no more keys available
                     throw new AllKeysRateLimitedException("All available key are rate limited");
                 }
@@ -323,10 +330,10 @@ namespace TornBot.Services.TornApi.Services
         /// <returns>void</returns>
         private void MarkApiKeyInvalid(string apiKey)
         {
-            DatabaseContext dbContext = _serviceProviderScoped.GetRequiredService<DatabaseContext>();
-
-            TornBot.Services.Database.Entities.ApiKeys dbApiKeys = dbContext.ApiKeys
-                .First(s => s.TornApiKey == apiKey);
+            using IServiceScope serviceProviderScoped = _serviceProvider.CreateScope();
+            using DatabaseContext dbContext = serviceProviderScoped.ServiceProvider.GetRequiredService<DatabaseContext>();
+                
+            TornBot.Services.Database.Entities.ApiKeys dbApiKeys = dbContext.ApiKeys.First(s => s.TornApiKey == apiKey);
 
             dbApiKeys.TornState = (byte)TornState.Invalid;
             dbContext.ApiKeys.Update(dbApiKeys);
@@ -340,7 +347,8 @@ namespace TornBot.Services.TornApi.Services
         /// <returns>void</returns>
         private void MarkApiKeyInactive(string apiKey)
         {
-            DatabaseContext dbContext = _serviceProviderScoped.GetRequiredService<DatabaseContext>();
+            using IServiceScope serviceProviderScoped = _serviceProvider.CreateScope();
+            using DatabaseContext dbContext = serviceProviderScoped.ServiceProvider.GetRequiredService<DatabaseContext>();
 
             TornBot.Services.Database.Entities.ApiKeys dbApiKeys = dbContext.ApiKeys
                 .First(s => s.TornApiKey == apiKey);
@@ -402,9 +410,10 @@ namespace TornBot.Services.TornApi.Services
         /// Will use the next available API key from the key store
         /// </summary>
         /// <param name="id">Torn Player id</param>
+        /// <param name="useOutsideKey">Use an Api Key from a outside of the faction</param>
         /// <returns>TornBot.Entities.TornPlayer object</returns>
         /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
-        public TornBot.Entities.TornPlayer GetPlayer(UInt32 id)
+        public TornBot.Entities.TornPlayer GetPlayer(UInt32 id, bool useOutsideKey = false)
         {
             //Loop until we get a valid response or run out of API keys or a other API call failure
             while (true)
@@ -413,7 +422,7 @@ namespace TornBot.Services.TornApi.Services
 
                 try
                 {
-                    key = GetNextKey(AccessLevel.Public);
+                    key = GetNextKey(useOutsideKey ? AccessLevel.OutsiderPublic : AccessLevel.Public);
 
                     return GetPlayer(id, key);
                 }
@@ -428,7 +437,6 @@ namespace TornBot.Services.TornApi.Services
                         } 
                         else if (e.InnerException is ApiKeyOwnerInactiveException)
                         {
-                            //TODO mark the key as owner inactive in the key store
                             MarkApiKeyInactive(key!);
                             continue;
                         }
@@ -626,81 +634,7 @@ namespace TornBot.Services.TornApi.Services
                 throw new ApiCallFailureException("Error deserializing torn player data", e);
             }
         }
-
-        /// <summary>
-        /// Attempts to get revive status of a player
-        /// </summary>
-        /// <param name="id">Torn Player id</param>
-        /// <returns>TornBot.Entities.ReviveStatus</returns>
-        /// <exception cref="ApiNotAvailableException">API system is currently unavailable</exception>
-        /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception
-        public TornBot.Entities.ReviveStatus GetReviveStatus(UInt32 id)
-        {
-            //Loop until we get a valid response or run out of API keys or a other API call failure
-            while (true)
-            {
-                //We ideally want to use an external API key so it doesnt return friends/faction
-                try
-                {
-                    string key = GetNextKey(AccessLevel.OutsiderPublic);
-                    return GetReviveStatus(id, key);
-                }
-                catch (ApiCallFailureException e)
-                {
-                    if (e.InnerException is not null)
-                    {
-                        if (e.InnerException is InvalidKeyException)
-                        {
-                            //TODO mark the key as invalid in the key store
-                            continue;
-                        } 
-                        else if (e.InnerException is ApiKeyOwnerInactiveException)
-                        {
-                            //TODO mark the key as owner inactive in the key store
-                            continue;
-                        }
-                        else
-                        {
-                            throw;
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new ApiCallFailureException("Error in Torn API GetReviveStatus(UInt32 id)", e);
-                }
-            }
-        }
-
-        /// <summary>
-        /// Attempts to gets the Torn player's revive status
-        /// </summary>
-        /// <param name="id">Torn Player id</param>
-        /// <param name="apiKey">Api Key to use</param>
-        /// <returns>TornBot.Entities.ReviveStatus object</returns>
-        /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
-        public TornBot.Entities.ReviveStatus GetReviveStatus(UInt32 id, string apiKey)
-        {
-            string url = String.Format("user/{0}?key={1}", id.ToString(), apiKey);
-
-            try
-            {    
-                string apiResponse = MakeApiRequest(url);
-                
-                TornBot.Entities.ReviveStatus reviveStatus = JsonSerializer.Deserialize<TornApi.Entities.User>(apiResponse).ToReviveStatus();
-                return reviveStatus;
-            }
-            catch (ApiCallFailureException)
-            {
-                throw;
-            }
-            catch (Exception e)
-            {
-                //TODO log this correctly
-                throw new ApiCallFailureException("Error deserializing revive status data", e);
-            }
-        }
-
+        
         /// <summary>
         /// Attempts to gets the Api Key Info from the supplied Api Key
         /// </summary>
@@ -726,6 +660,60 @@ namespace TornBot.Services.TornApi.Services
             {
                 //TODO log this correctly
                 throw new ApiCallFailureException("Error deserializing api Key info data", e);
+            }
+        }
+
+        public void CheckAllActiveApiKeys()
+        {
+            using IServiceScope serviceProviderScoped = _serviceProvider.CreateScope();
+            using DatabaseContext dbContext = serviceProviderScoped.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+            List<TornBot.Services.Database.Entities.ApiKeys> dbApiKeys;
+            dbApiKeys = dbContext.ApiKeys //get the api key that hasnt been used for the longest
+                .Where(s =>
+                    s.TornApiKey != "" &&
+                    s.TornState == (byte)TornState.Ok)
+                .ToList();
+
+            TornBot.Entities.KeyInfo apiKeyInfo;
+            KeyAccessLevel keyAccessLevel;
+
+            //TODO = Move this to the DB
+            UInt32 homeFactionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
+
+            foreach (var dbApiKey in dbApiKeys)
+            {
+                try
+                {
+                    apiKeyInfo = GetApiKeyInfo(dbApiKey.TornApiKey);
+
+                }
+                catch (ApiCallFailureException e)
+                {
+                    if (e.InnerException is not null)
+                    {
+                        switch (e.InnerException)
+                        {
+                            case InvalidKeyException:
+                                MarkApiKeyInvalid(dbApiKey.TornApiKey);
+                                continue;
+                            case ApiKeyOwnerInactiveException:
+                                MarkApiKeyInactive(dbApiKey.TornApiKey);
+                                continue;
+                            default:
+                                throw;
+                        }
+                    }
+                    throw;
+                }
+                keyAccessLevel = CalculateKeyAccessLevel(apiKeyInfo, dbApiKey.FactionId, homeFactionId);
+
+                if (dbApiKey.TornAccessLevel != (byte)keyAccessLevel)
+                {
+                    dbApiKey.TornAccessLevel = (byte)keyAccessLevel;
+                    dbContext.ApiKeys.Update(dbApiKey);
+                    dbContext.SaveChanges();
+                }
             }
         }
     }

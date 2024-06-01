@@ -17,6 +17,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+using DSharpPlus.Entities;
+using DSharpPlus.SlashCommands;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -302,30 +304,91 @@ namespace TornBot.Services.Players.Service
             }
         }
 
-        public List<Entities.ReviveStatus> GetReviveStatus(UInt32 factionID, bool forceUpdate = false)
+        public List<Entities.TornPlayer> GetReviveStatus(UInt32 factionID, ref InteractionContext ctx)
         {
-            List<Entities.ReviveStatus> reviveStatusList = new List<Entities.ReviveStatus>();
+            ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent("Looking for players"));
 
-            TornApi.Entities.Faction Faction = _torn.GetFaction(factionID);
+            List<Entities.TornPlayer> tornPlayerList = new List<Entities.TornPlayer>();
 
-            foreach (var member in Faction.FactionMember)
+            //TODO = Move this to the DB
+            UInt32 homeFactionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
+
+            TornApi.Entities.Faction faction = _torn.GetFaction(factionID);
+
+            bool useOutsideKey = homeFactionId == faction.Id;
+            //TODO this is for testing
+            useOutsideKey = false;
+
+            //char[] pinWheel = { '|', '/', '-', '\\' };
+            char[] pinWheel = ['\u2582', '\u2583', '\u2585', '\u2586', '\u2587', '\u2586', '\u2585', '\u2583'];
+            UInt16 pinWheelCounter = 0;
+            const int totalSleepLength = 5000;
+            const int sleepSteps = 10;
+            int sleepCounter;
+            
+            int membersChecked = 0;
+            
+            foreach (var member in faction.FactionMember)
             {
                 if (member.Value.Status.state != "Fallen")
                 {
                     UInt32 memberID = member.Key;
-                    Entities.ReviveStatus reviveStatus = _torn.GetReviveStatus(memberID);
+                    Entities.TornPlayer tornPlayer;
+                    while (true)
+                    {
+                        try
+                        {
+                            tornPlayer = _torn.GetPlayer(memberID, useOutsideKey);
+                            pinWheelCounter = 0;
+                            break;
+                        }
+                        catch (ApiCallFailureException e)
+                        {
+                            if (e.InnerException is AllKeysRateLimitedException)
+                            {
+                                for (sleepCounter = 0; sleepCounter < sleepSteps; sleepCounter++)
+                                {
+                                    ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(
+                                        String.Format(
+                                            "Checked {0} of {1} members. Waiting for API Keys to become usable (rate limiting) {2}",
+                                            membersChecked,
+                                            faction.FactionMember.Count,
+                                            pinWheel[pinWheelCounter]
+                                            )))
+                                        .Wait();
+
+                                    if (++pinWheelCounter > pinWheel.Length - 1)
+                                        pinWheelCounter = 0;
+                                    
+                                    System.Threading.Thread.Sleep(totalSleepLength / sleepSteps);
+                                }
+                            }
+                            else
+                            {
+                                throw;
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            throw;
+                        }
+                    }
                     
-                    reviveStatus.Player.Faction.Tag_image = Faction.TagImage; 
+                    tornPlayer.Faction.Tag_image = faction.TagImage; 
                     //The tag image has to be added from the faction as it is not accessible through the user
 
-                    if (reviveStatus.Revivable == 1)
+                    if (tornPlayer.Revivable == 1)
                     {
-                        reviveStatusList.Add(reviveStatus);
+                        tornPlayerList.Add(tornPlayer);
                     }
                 }
-            }
-            return reviveStatusList;
+                
+                membersChecked++;
 
+                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(String.Format("Checked {0} of {1} members ", membersChecked, faction.FactionMember.Count))).Wait();
+                
+            }
+            return tornPlayerList;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
