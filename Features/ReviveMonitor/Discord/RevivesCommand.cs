@@ -42,7 +42,7 @@ namespace TornBot.Features.ReviveMonitor.Discord
 
             //return list of players that can be revived
             //TODO Wrap in Try/catch block as GetReviveStatus can throw an exception
-            List<Entities.TornPlayer> tornPlayerList = _players.GetReviveStatus((UInt32)id, ref ctx);
+            List<Entities.TornPlayer> tornPlayerList = _players.GetReviveStatus((UInt32)id, out bool usedInsideKey, ref ctx);
 
             if (tornPlayerList.Count == 0)
             {
@@ -57,6 +57,8 @@ namespace TornBot.Features.ReviveMonitor.Discord
             string faction_tag = tornPlayerList.FirstOrDefault().Faction.Tag_image;
             
             DateTime timeNow = DateTime.Now;
+            
+            string embedTitle = "Revivable players" + (usedInsideKey ? "\nWARNING - Inside key user. Expect false positives:" : ":");
 
             DiscordEmbedBuilder.EmbedAuthor embedAuthor = new DiscordEmbedBuilder.EmbedAuthor
             {
@@ -70,7 +72,7 @@ namespace TornBot.Features.ReviveMonitor.Discord
             };
             DiscordEmbedBuilder embed = new DiscordEmbedBuilder
             {
-                Title = "Revivable players:",
+                Title = embedTitle,
                 Author = embedAuthor,
                 Description = allRevivablePlayers,
                 Footer = embedFooter,

@@ -92,7 +92,7 @@ namespace TornBot.Services.TornApi.Services
             _config = config;
             _serviceProvider = serviceProvider;
             
-            _rateLimitPerMinutePerKey = 10;
+            _rateLimitPerMinutePerKey = 20;
             _rateLimitWindow = TimeSpan.FromSeconds(60);
             _keyCallTimestamps = new ConcurrentDictionary<string, Queue<DateTime>>();
         }
@@ -258,14 +258,14 @@ namespace TornBot.Services.TornApi.Services
                 using DatabaseContext dbContext = serviceProviderScoped.ServiceProvider.GetRequiredService<DatabaseContext>();
                     
                 //If we are not asked for an outsider key, do not offer outsider keys
-                if (((byte)accessLevel & 0b1000000) == 0)
+                if (((byte)accessLevel & AccessLevelOutsider) == 0)
                 {
                     dbApiKeys = dbContext.ApiKeys //get the api key that hasnt been used for the longest
                         .Where(s =>
                             s.TornApiKey != "" &&
                             s.TornState == (byte)TornState.Ok &&
                             ((s.TornAccessLevel & (byte)accessLevel) == (byte)accessLevel) &&
-                            ((s.TornAccessLevel & 0b10000000) == 0)
+                            ((s.TornAccessLevel & AccessLevelOutsider) == 0)
                         )
                         .OrderBy(s => s.TornLastUsed)
                         .ToList();
