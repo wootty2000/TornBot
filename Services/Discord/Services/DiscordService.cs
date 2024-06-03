@@ -30,6 +30,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using TornBot.Services.Discord.Interfaces;
 
 namespace TornBot.Services.Discord.Services
 {
@@ -57,9 +59,25 @@ namespace TornBot.Services.Discord.Services
 
         public async Task StartAsync(CancellationToken token)
         {
+            IServiceProvider serviceProvider = TornBotApplication.GetIServiceProvider();
+            
             DiscordActivity status = new("Torn - Dystopia", ActivityType.Watching);
 
             Assembly asm = Assembly.GetExecutingAssembly();
+
+            //--------------------
+            // Register event handlers
+            var commandModuleType = typeof(IDiscordEventHandlerModule);
+            var commandModules = Assembly.GetExecutingAssembly().GetTypes()
+                .Where(t => commandModuleType.IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+
+            foreach (var module in commandModules)
+            {
+                var commandInstance = (IDiscordEventHandlerModule)ActivatorUtilities.CreateInstance(serviceProvider, module);
+                commandInstance.RegisterEventHandlers(discord);
+            }
+            // End of registering event handlers
+            //--------------------
 
             //--------------------
             // Text Commands - Setup
@@ -89,8 +107,7 @@ namespace TornBot.Services.Discord.Services
             discord.GuildDownloadCompleted += GuildDownload;
             //slashCommands.SlashCommandErrored += EventListener.OnSlashCommandErrored;
             //slashCommands.AutocompleteErrored += EventListener.OnAutocompleteError;
-
-
+            
             await discord.ConnectAsync(status, DSharpPlus.Entities.UserStatus.Online);
         }
 
