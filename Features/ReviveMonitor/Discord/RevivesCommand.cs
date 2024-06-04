@@ -20,17 +20,17 @@
 
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
-using TornBot.Services.Players.Service;
+using TornBot.Services.Factions.Services;
 
 namespace TornBot.Features.ReviveMonitor.Discord
 {
     public class RevivesCommand : ApplicationCommandModule
     {
-        PlayersService _players;
+        private FactionsService _factionsService;
         
-        public RevivesCommand(PlayersService players)
+        public RevivesCommand(FactionsService factionsService)
         {
-            _players = players;
+            _factionsService = factionsService;
         }
         
         [SlashCommand("Revives", "Gets the revive status of a players from the faction")]
@@ -42,7 +42,7 @@ namespace TornBot.Features.ReviveMonitor.Discord
 
             //return list of players that can be revived
             //TODO Wrap in Try/catch block as GetReviveStatus can throw an exception
-            List<Entities.TornPlayer> tornPlayerList = _players.GetReviveStatus((UInt32)id, out bool usedInsideKey, ref ctx);
+            List<Entities.TornPlayer> tornPlayerList = _factionsService.GetReviveStatus((UInt32)id, out bool usedInsideKey, ref ctx);
 
             if (tornPlayerList.Count == 0)
             {
@@ -55,8 +55,6 @@ namespace TornBot.Features.ReviveMonitor.Discord
             string factionName = tornPlayerList.FirstOrDefault().Faction.Name;
             UInt32 factionID = tornPlayerList.FirstOrDefault().Faction.Id;
             string faction_tag = tornPlayerList.FirstOrDefault().Faction.Tag_image;
-            
-            DateTime timeNow = DateTime.Now;
             
             string embedTitle = "Revivable players" + (usedInsideKey ? "\nWARNING - Inside key user. Expect false positives:" : ":");
 

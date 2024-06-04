@@ -112,7 +112,7 @@ namespace TornBot.Features.ApiKeyManagement.Discord
                 }
                 
                 args.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
-                    new DiscordInteractionResponseBuilder().WithContent(responseMessage)).Wait();
+                    new DiscordInteractionResponseBuilder().WithContent(responseMessage).AsEphemeral()).Wait();
             }
             
             return Task.CompletedTask;
