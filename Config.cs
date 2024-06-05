@@ -72,6 +72,9 @@ namespace TornBot
 
         [JsonProperty("InactivePlayerChannelId")]
         internal string InactivePlayerChannelId = "Channel ID";
+        
+        [JsonProperty("LogChannelId")]
+        internal string LogChannelId = "Channel ID";
 
 
         /// <summary>

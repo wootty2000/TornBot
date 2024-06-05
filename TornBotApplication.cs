@@ -21,8 +21,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using TornBot.Services;
 using Microsoft.AspNetCore.Builder;
-using System.Diagnostics;
+using Microsoft.Extensions.Logging;
+using NLog.Extensions.Logging;
 using TornBot.Services.Database;
+using TornBot.Services.Logger;
 
 namespace TornBot
 {
@@ -41,10 +43,18 @@ namespace TornBot
             //We want a WebApplication as we will probably run a web site from here
             var builder = WebApplication.CreateBuilder();
             var services = builder.Services;
-
+            
             // Add the configuration to the registered services
             services.AddSingleton(config);
-
+                        
+            // Configure NLog
+            new LoggerModule().ConfigureNLog(config, services);
+            services.AddLogging(logging =>
+            {
+                logging.ClearProviders(); // Clear default providers
+                logging.AddNLog(); // Add NLog as the logging provider
+            });
+            
             //Get the database setup
             DatabaseContext.Init(config, services);
 
@@ -73,13 +83,5 @@ namespace TornBot
         public static IServiceProvider GetIServiceProvider() { return serviceProvider; }
 
         public static WebApplication GetWebApplication() { return app; }
-
-        public static void LogError(string message, Exception exception)
-        {
-            var methodInfo = new StackTrace().GetFrame(1).GetMethod();
-            var className = methodInfo.ReflectedType.Name;
-
-            Console.WriteLine("ERROR: {0} - {1}\n\t{2}", className, message, exception);
-        }
     }
 }

@@ -38,7 +38,7 @@ namespace TornBot.Features.StocksMonitor.Cron
 
         private readonly ILogger<StocksJob> _logger;
         private static string _cronExpression = "4/30 * * * * ? *";
-        
+
         public static void AddJob(IServiceCollection services)
         {
             services.AddQuartz(conf =>
@@ -69,7 +69,7 @@ namespace TornBot.Features.StocksMonitor.Cron
 
             if (stockResponse == null)
             {
-                _logger.LogInformation("Stocks update failed due to API error");
+                _logger.LogError("Stocks update failed due to API error");
                 return null;
             }
 
@@ -177,7 +177,7 @@ namespace TornBot.Features.StocksMonitor.Cron
                 }
                 else
                 {
-                    Console.WriteLine("Stock market is being checked.");
+                    _logger.LogInformation("Stock market is being checked.");
                 }
 
             }

@@ -23,15 +23,14 @@ using DSharpPlus.SlashCommands;
 using DSharpPlus;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NLog;
+using NLog.Config;
 using TornBot.Services.Discord.Interfaces;
+using TornBot.Services.Logger;
+using TornBot.Services.Logger.Targets;
 
 namespace TornBot.Services.Discord.Services
 {
@@ -40,20 +39,29 @@ namespace TornBot.Services.Discord.Services
         private readonly IConfigurationRoot _config;
         private readonly ILogger<DiscordService> _logger;
         private readonly IHostApplicationLifetime _applicationLifetime;
+        private readonly LoggingConfiguration _nlogConfig;
         private readonly DiscordClient discord;
         private SlashCommandsExtension slashCommands;
         private static DiscordClient Client { get; set; }
 
-        public DiscordService(IConfigurationRoot config, ILogger<DiscordService> logger, IHostApplicationLifetime applicationLifetime)
+        public DiscordService(
+            IConfigurationRoot config,
+            ILogger<DiscordService> logger, 
+            IHostApplicationLifetime applicationLifetime,
+            LoggingConfiguration nlogConfig
+        )
         {
             _config = config;
             _logger = logger;
             _applicationLifetime = applicationLifetime;
+            _nlogConfig = nlogConfig;
+            
             discord = new(new()
             {
                 Token = config.GetValue<string>("token"),
                 TokenType = DSharpPlus.TokenType.Bot,
-                Intents = DiscordIntents.All
+                Intents = DiscordIntents.All,
+                LoggerFactory = new NLogLoggerFactory()              
             });
         }
 
@@ -124,11 +132,33 @@ namespace TornBot.Services.Discord.Services
 
         private async Task GuildDownload(DiscordClient sender, GuildDownloadCompletedEventArgs args)
         {
+            //TODO - Move to DB
+            var channelId = _config.GetValue<string>("LogChannelId");
+            if (channelId is null)
+                return;
+            
+            var logChannel = await discord.GetChannelAsync(ulong.Parse(channelId));
+
+            // Initialize the Discord target with the connected client and log channel
+            InitializeDiscordTarget(discord, logChannel);
         }
+        
+        private void InitializeDiscordTarget(DiscordClient discordClient, DiscordChannel logChannel)
+        {
+            var discordTarget = _nlogConfig.FindTargetByName<DiscordTarget>("discord");
+            if (discordTarget != null)
+            {
+                discordTarget.Initialize(discordClient, logChannel);
+                LogManager.Configuration = _nlogConfig;
+                LogManager.ReconfigExistingLoggers();
+            }
+        }
+        
         public string GetStocksChannelId()
         {
             return _config.GetValue<string>("StocksChannelId");
         }
+        
         public string GetInactivePlayerChannelId()
         {
             return _config.GetValue<string>("InactivePlayerChannelId");

@@ -33,6 +33,7 @@ namespace TornBot.Services.Database
         public DbSet<TornPlayer> TornPlayers { get; set; }
         public DbSet<BattleStats> BattleStats { get; set; }
         public DbSet<ApiKeys> ApiKeys { get; set; }
+        public DbSet<LogEntry> LogEntries { get; set; }
 
         public DatabaseContext(DbContextOptions<DatabaseContext> options)
             : base(options)
@@ -49,7 +50,10 @@ namespace TornBot.Services.Database
                 config.GetValue<string>("DbDatabase")
             );
             
-            services.AddDbContext<DatabaseContext>(options => options.UseMySQL(connectionString), ServiceLifetime.Transient);
+            services.AddDbContext<DatabaseContext>(
+                options => options.UseMySQL(connectionString),
+                ServiceLifetime.Transient
+            );
         }
 
         public static void RunMigrations(IServiceProvider serviceProvider)
