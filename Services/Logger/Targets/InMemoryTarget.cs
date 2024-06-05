@@ -52,51 +52,17 @@ public class InMemoryTarget : Target
         var logs = new List<LogEventInfo>();
         count = Math.Min(count, _buffer.Length); // Limit count to buffer capacity
 
-        // Handle case where head is less than tail (no wrapping)
-        if (_head < _tail)
+        int totalLogs = _head >= _tail ? _head - _tail : _buffer.Length - _tail + _head;
+        count = Math.Min(count, totalLogs); // Limit count to the actual number of logs
+
+        if (count == 0)
+            return logs;
+
+        int start = (_head - count + _buffer.Length) % _buffer.Length;
+        for (int i = 0; i < count; i++)
         {
-            int remaining = _head - _tail;
-            if (count <= remaining)
-            {
-                for (int i = _tail; i < _tail + count; i++)
-                {
-                    logs.Add(_buffer[i]);
-                }
-            }
-            else
-            {
-                for (int i = _tail; i < _head; i++)
-                {
-                    logs.Add(_buffer[i]);
-                }
-                for (int i = 0; i < count - remaining; i++)
-                {
-                    logs.Add(_buffer[i]);
-                }
-            }
-        }
-        else
-        {
-            // Handle case where head has wrapped around
-            int remaining = _buffer.Length - _tail;
-            if (count <= remaining)
-            {
-                for (int i = _tail; i < _tail + count; i++)
-                {
-                    logs.Add(_buffer[i]);
-                }
-            }
-            else
-            {
-                for (int i = _tail; i < _buffer.Length; i++)
-                {
-                    logs.Add(_buffer[i]);
-                }
-                for (int i = 0; i < count - remaining; i++)
-                {
-                    logs.Add(_buffer[i]);
-                }
-            }
+            logs.Add(_buffer[start]);
+            start = (start + 1) % _buffer.Length;
         }
 
         return logs;
