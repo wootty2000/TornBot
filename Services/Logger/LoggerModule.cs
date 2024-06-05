@@ -18,7 +18,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
+using NLog.Common;
 using NLog.Config;
+using NLog.Layouts;
 using NLog.Targets;
 using TornBot.Services.Logger.Targets;
 
@@ -39,11 +41,16 @@ public class LoggerModule
         );
         
         // Configure database target for MySQL (replace with your details)
-        var databaseTarget = new DatabaseTarget("TornBorMySql")
+        var databaseTarget = new DatabaseTarget("TornBotMySql")
         {
+            DBProvider = "MySql.Data.MySqlClient.MySqlConnection, MySql.Data",
             ConnectionString = connectionString,
             CommandText = "INSERT INTO Logs (Level, Message, Logger, Exception) VALUES (@Level, @Message, @Logger, @Exception);"
         };
+        databaseTarget.Parameters.Add(new DatabaseParameterInfo("@Level", new SimpleLayout("${level}")));
+        databaseTarget.Parameters.Add(new DatabaseParameterInfo("@Message", new SimpleLayout("${message}")));
+        databaseTarget.Parameters.Add(new DatabaseParameterInfo("@Logger", new SimpleLayout("${logger}")));
+        databaseTarget.Parameters.Add(new DatabaseParameterInfo("@Exception", new SimpleLayout("${exception:format=tostring}")));
 
         var inMemoryTarget = new InMemoryTarget();
 
@@ -52,6 +59,7 @@ public class LoggerModule
             Name = "Discord"
         };
 
+        config.AddTarget(databaseTarget);
         config.AddTarget(discordTarget);
 
         config.AddRule(LogLevel.Warn, LogLevel.Fatal, databaseTarget);
