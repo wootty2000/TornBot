@@ -41,6 +41,9 @@ public class DiscordTarget : TargetWithLayout
         {
             return;
         }
+
+        if (logEvent.Level == LogLevel.Info && logEvent.LoggerName == "Microsoft.EntityFrameworkCore.Database.Command")
+            return;
         
         var logMessage = this.Layout.Render(logEvent);
         SendLogMessageToDiscord(logMessage).ConfigureAwait(false);
@@ -48,6 +51,11 @@ public class DiscordTarget : TargetWithLayout
 
     private async Task SendLogMessageToDiscord(string message)
     {
+        if (message.Length > 2000)
+        {
+            message = message.Substring(0, 1950) + "\nMessage has been truncated due to Discord limits";
+        }
+        
         try
         {
             await _logChannel.SendMessageAsync(message);
