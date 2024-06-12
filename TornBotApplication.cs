@@ -62,7 +62,7 @@ namespace TornBot
             DatabaseContext.RunMigrations(services.BuildServiceProvider());
              
             // RegisterModules will find all the IModule modules and call the module's RegisterModule function
-            ModuleExtensions.RegisterModules(services); 
+            ModuleExtensions.RegisterModules(services);
 
             serviceProvider = services.BuildServiceProvider();
 

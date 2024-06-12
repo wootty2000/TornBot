@@ -25,7 +25,7 @@ namespace TornBot.Features.ApiKeyManagement.Cron;
 
 public class CheckActiveTornKeyJob : WorkerJob
 {
-    TornApiService tornApiService;
+    private readonly TornApiService _tornApiService;
     
     private readonly ILogger<CheckActiveTornKeyJob> _logger;
     private static string _cronExpression = "0 5 1 * * ? *";
@@ -47,12 +47,21 @@ public class CheckActiveTornKeyJob : WorkerJob
     public CheckActiveTornKeyJob(ILogger<CheckActiveTornKeyJob> logger, TornApiService tornApiService)
     {
         _logger = logger;
-        this.tornApiService = tornApiService;
+        _tornApiService = tornApiService;
     }
     
     public Task Execute(IJobExecutionContext context)
     {
-        tornApiService.CheckAllActiveApiKeys();
+        try
+        {
+            _tornApiService.CheckAllActiveApiKeys();
+
+        }
+        catch (Exception)
+        {
+            // TODO - Check is there is anything we actually want / need to do. 
+            // Probably just ignore and exceptions and try again on the next cron cycle 
+        }
         
         return Task.CompletedTask;
     }

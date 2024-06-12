@@ -35,6 +35,7 @@ namespace TornBot.Services.Players.Service
         private DatabaseContext _database;
         private TornApiService _torn;
         private TornStatsApiService _tornStats;
+        private readonly ArmoryService _armoryService;
         
         public PlayersService(
             DatabaseContext database,
@@ -299,6 +300,143 @@ namespace TornBot.Services.Players.Service
                 }
                 
             }
+        }
+        
+        public void RecordPlayerLoadOut(UInt32 playerId, LoadOut loadOut)
+        {
+            Database.Entities.LoadOuts dbLoadOuts = _database.LoadOuts.FirstOrDefault(lo => lo.PlayerId == playerId);
+            bool newLoadOut = false;
+            if (dbLoadOuts == null)
+            {
+                newLoadOut = true;
+                dbLoadOuts = new Database.Entities.LoadOuts();
+                dbLoadOuts.PlayerId = playerId;
+            }
+            
+            dbLoadOuts.Timestamp = DateTime.UtcNow;
+
+            string mods;
+            
+            if (loadOut.PrimaryWeapon != null)
+            {
+                if (!_armoryService.CheckItemInDatabase(loadOut.PrimaryWeapon))
+                {
+                    _armoryService.AddItem(loadOut.PrimaryWeapon);
+                }
+
+                dbLoadOuts.PrimaryWeapon = loadOut.PrimaryWeapon.Uid;
+
+                mods = "";
+                foreach (var mod in loadOut.PrimaryWeapon.Mods)
+                {
+                    if (mods == "")
+                        mods = mod.Id.ToString();
+                    else
+                        mods += String.Format(",{0}", mod.Id.ToString());
+                }
+
+                dbLoadOuts.PrimaryWeaponMods = mods;
+            }
+            
+            if (loadOut.SecondaryWeapon != null)
+            {
+                if (!_armoryService.CheckItemInDatabase(loadOut.SecondaryWeapon))
+                {
+                    _armoryService.AddItem(loadOut.SecondaryWeapon);
+                }
+
+                dbLoadOuts.SecondaryWeapon = loadOut.SecondaryWeapon.Uid;
+
+                mods = "";
+                foreach (var mod in loadOut.SecondaryWeapon.Mods)
+                {
+                    if (mods == "")
+                        mods = mod.Id.ToString();
+                    else
+                        mods += String.Format(",{0}", mod.Id.ToString());
+                }
+
+                dbLoadOuts.SecondaryWeaponMods = mods;
+            }
+            
+            if (loadOut.MeleeWeapon != null)
+            {
+                if (!_armoryService.CheckItemInDatabase(loadOut.MeleeWeapon))
+                {
+                    _armoryService.AddItem(loadOut.MeleeWeapon);
+                }
+
+                dbLoadOuts.MeleeWeapon = loadOut.MeleeWeapon.Uid;
+            }
+            
+            if (loadOut.TempWeapon != null)
+            {
+                if (!_armoryService.CheckItemInDatabase(loadOut.TempWeapon))
+                {
+                    _armoryService.AddItem(loadOut.TempWeapon);
+                }
+
+                dbLoadOuts.TemporaryWeapon = loadOut.TempWeapon.Uid;
+            }
+            
+            // - Armor
+            
+            if (loadOut.HelmetArmor != null)
+            {
+                if (_armoryService.CheckItemInDatabase(loadOut.HelmetArmor))
+                {
+                    _armoryService.AddItem(loadOut.HelmetArmor);
+                }
+                
+                dbLoadOuts.HelmetArmor = loadOut.HelmetArmor.Uid;
+            }
+            
+            if (loadOut.ChestArmor != null)
+            {
+                if (_armoryService.CheckItemInDatabase(loadOut.ChestArmor))
+                {
+                    _armoryService.AddItem(loadOut.ChestArmor);
+                }
+                
+                dbLoadOuts.ChestArmor = loadOut.ChestArmor.Uid;
+            }
+            
+            if (loadOut.PantsArmor != null)
+            {
+                if (_armoryService.CheckItemInDatabase(loadOut.PantsArmor))
+                {
+                    _armoryService.AddItem(loadOut.PantsArmor);
+                }
+                
+                dbLoadOuts.PantsArmor = loadOut.PantsArmor.Uid;
+            }
+            
+            if (loadOut.GlovesArmor != null)
+            {
+                if (_armoryService.CheckItemInDatabase(loadOut.GlovesArmor))
+                {
+                    _armoryService.AddItem(loadOut.GlovesArmor);
+                }
+                
+                dbLoadOuts.GlovesArmor = loadOut.GlovesArmor.Uid;
+            }
+            
+            if (loadOut.BootsArmor != null)
+            {
+                if (_armoryService.CheckItemInDatabase(loadOut.BootsArmor))
+                {
+                    _armoryService.AddItem(loadOut.BootsArmor);
+                }
+                
+                dbLoadOuts.BootsArmor = loadOut.BootsArmor.Uid;
+            }
+
+            if (newLoadOut)
+                _database.LoadOuts.Add(dbLoadOuts);
+            else
+                _database.LoadOuts.Update(dbLoadOuts);
+            
+            _database.SaveChanges();
         }
         
         public Task StartAsync(CancellationToken cancellationToken)
