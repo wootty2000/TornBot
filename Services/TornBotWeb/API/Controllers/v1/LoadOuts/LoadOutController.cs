@@ -22,6 +22,7 @@ using TornBot.Services.Players.Service;
 using TornBot.Services.TornApi.Services;
 using TornBot.Services.TornBotWeb.API.Controllers.v1.LoadOuts.Converters;
 using TornBot.Services.TornBotWeb.API.Controllers.v1.LoadOuts.Models;
+using TornBot.Services.TornBotWeb.API.Controllers.v1.Spy;
 
 namespace TornBot.Services.TornBotWeb.API.Controllers.v1.LoadOuts;
 
@@ -56,6 +57,23 @@ public class LoadOutController : ControllerBase
         //{ "error": { "code" => 2, "error" => "Invalid API key" }}
         return BadRequest(Common.Common.GetErrorInvalidAPIKey());
     }
+    // GET api/<SpyController>/1234?key=ApiKey
+    [HttpGet("{id}")]
+    public IActionResult Get([FromRoute] LoadOutGetModel model)
+    {
+        // Validate the API key
+        if (!_tornApiService.IsApiKeyFromHomeFaction(model.key))
+        {
+            return BadRequest(Common.Common.GetErrorInvalidAPIKey());
+        }
+
+        TornBot.Entities.LoadOut loadOut = new LoadOut();
+        
+        loadOut = _playersService.GetPlayerLoadOut(UInt32.Parse(model.id));
+        
+        return Ok(loadOut);
+    }
+
 
     [HttpPost]
     public IActionResult Post([FromBody] JsonElement jsonElement)

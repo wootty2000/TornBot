@@ -34,7 +34,14 @@ CREATE TABLE ArmoryItems
 CREATE TABLE ArmoryItemRWBonus
 (
     `Id` int unsigned NOT NULL,
-    `Value` int unsigned NOT NULL,
+    `Value` int unsigned NULL,
     `Bonus` VARCHAR(255) NOT NULL,
     `Description` VARCHAR(512) NOT NULL
+);
+
+CREATE TABLE WeaponMods
+(
+    `Id` int unsigned NOT NULL PRIMARY KEY,
+    `Title` VARCHAR(255) NOT NULL,
+    `Description` VARCHAR(255) NOT NULL
 );

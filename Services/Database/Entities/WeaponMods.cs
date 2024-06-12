@@ -15,12 +15,32 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+using TornBot.Entities;
+
 namespace TornBot.Services.Database.Entities;
 
-public class ArmoryItemRWBonus
+public class WeaponMods
 {
     public UInt16 Id { get; set; }
-    public string Bonus { get; set; }
-    public UInt16? Value { get; set; }
+    public string Title { get; set; }
     public string Description { get; set; }
+    
+    public WeaponMods() {}
+
+    public WeaponMods(TornBot.Entities.WeaponMod mod)
+    {
+        Id = mod.Id;
+        Title = mod.Title;
+        Description = mod.Description;
+    }
+
+    public TornBot.Entities.WeaponMod ToWeaponMod()
+    {
+        return new WeaponMod
+        {
+            Id = Id,
+            Title = Title,
+            Description = Description
+        };
+    }
 }

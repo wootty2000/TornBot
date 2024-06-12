@@ -15,6 +15,7 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+using TornBot.Entities;
 using TornBot.Services.Database;
 using TornBot.Services.Database.Entities;
 
@@ -36,6 +37,7 @@ public class ArmoryService
     
     public void AddItem(TornBot.Entities.ArmoryItem armoryItem)
     {
+        // TODO - We should probably pull this from the API instead. Armor items are missing Armor and Quality values
         TornBot.Services.Database.Entities.ArmoryItems dbArmoryItems = new TornBot.Services.Database.Entities.ArmoryItems();
         
         dbArmoryItems.Uid = armoryItem.Uid;
@@ -53,11 +55,11 @@ public class ArmoryService
             dbArmoryItems.BonusId1 = armoryItem.Bonuses[0].Id;
             dbArmoryItems.BonusVal1 = armoryItem.Bonuses[0].Value;
 
-            
+            // Bonus with id and value as null, its been manually created to allow for String.Format to add the value correctly
+            // We can fall back on id and value if the above hasnt been created
             if(
-                !_database.ArmoryItemRWBonus.Any(rwb => rwb.Id == dbArmoryItems.BonusId1 && rwb.Value == dbArmoryItems.BonusId1) &&
-                !_database.ArmoryItemRWBonus.Any(rwb => rwb.Id == dbArmoryItems.BonusId1 && rwb.Value == null)
-                
+                !_database.ArmoryItemRWBonus.Any(rwb => rwb.Id == dbArmoryItems.BonusId1 && rwb.Value == null) && 
+                !_database.ArmoryItemRWBonus.Any(rwb => rwb.Id == dbArmoryItems.BonusId1 && rwb.Value == dbArmoryItems.BonusId1)
             )
             {
                 bonus = new ArmoryItemRWBonus
@@ -122,5 +124,83 @@ public class ArmoryService
         }
         
         _database.SaveChanges();
+    }
+
+    public TornBot.Entities.ArmoryItem GetItem(UInt64 itemUid)
+    {
+        Database.Entities.ArmoryItems? dbItem = _database.ArmoryItems.FirstOrDefault(ai => ai.Uid == itemUid);
+        TornBot.Entities.ArmoryItem item = new TornBot.Entities.ArmoryItem();
+
+        if (dbItem == null)
+        {
+            item.Uid = itemUid;
+            item.Id = 0;
+            item.Name = "Unknown Item";
+            item.Color = 0;
+            
+            //TODO - Pull the item from Torn API instead of giving an unknown item
+            return item;
+        }
+        
+        item.Uid = dbItem.Uid;
+        item.Id = dbItem.Id;
+        item.Name = dbItem.Name;
+        item.Damage = dbItem.Damage;
+        item.Accuracy = dbItem.Accuracy;
+        item.Color = (TornBot.Entities.ArmoryItem.ItemColor)dbItem.Color;
+        if (dbItem.BonusId1 > 0)
+            item.Bonuses.Add(GetItemRWBonus(dbItem.BonusId1, dbItem.BonusVal1));
+        if (dbItem.BonusId2 > 0)
+            item.Bonuses.Add(GetItemRWBonus(dbItem.BonusId2, dbItem.BonusVal2));
+        if (dbItem.BonusId3 > 0)
+            item.Bonuses.Add(GetItemRWBonus(dbItem.BonusId3, dbItem.BonusVal3));
+
+        return item;
+    }
+
+    public TornBot.Entities.ItemRankedWarBonus GetItemRWBonus(UInt16 id, UInt16 value)
+    {
+
+        Database.Entities.ArmoryItemRWBonus? dbBonus = 
+            _database.ArmoryItemRWBonus.Where(b => b.Id == id && b.Value == null).FirstOrDefault();
+        TornBot.Entities.ItemRankedWarBonus bonus = new ItemRankedWarBonus();
+
+        if (dbBonus == null)
+        {
+            dbBonus = _database.ArmoryItemRWBonus.FirstOrDefault(b =>
+                b.Id == id && b.Value == value);
+            bonus.Description = dbBonus.Description;
+        }
+        else
+        {
+            bonus.Description = String.Format(dbBonus.Description, value);
+        }
+        
+        bonus.Id = id;
+        bonus.Value = value;
+        bonus.Title = dbBonus.Bonus;
+
+        return bonus;
+    }
+
+    public bool CheckWeaponModInDatabase(TornBot.Entities.WeaponMod mod)
+    {
+        return _database.WeaponMods.Any(wm => wm.Id == mod.Id);
+    }
+
+    public void AddWeaponMod(TornBot.Entities.WeaponMod mod)
+    {
+        _database.WeaponMods.Add(new Database.Entities.WeaponMods(mod));
+        _database.SaveChanges();
+    }
+
+    public TornBot.Entities.WeaponMod GetWeaponMod(UInt16 id)
+    {
+        Database.Entities.WeaponMods dbMod = _database.WeaponMods.FirstOrDefault(wm => wm.Id == id);
+        
+        if (dbMod == null)
+            return new TornBot.Entities.WeaponMod();
+
+        return dbMod.ToWeaponMod();
     }
 }

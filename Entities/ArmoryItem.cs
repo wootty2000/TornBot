@@ -30,6 +30,7 @@ public class ArmoryItem
     public ArmoryItem()
     {
         Bonuses = new List<ItemRankedWarBonus>();
+        Mods = new List<WeaponMod>();
     }
 
     public UInt64 Uid { get; set; }
