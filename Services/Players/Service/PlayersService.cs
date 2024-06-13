@@ -451,6 +451,8 @@ namespace TornBot.Services.Players.Service
                 return loadOut;
             }
 
+            loadOut.Timestamp = dbLoadOut.Timestamp;
+
             loadOut.PrimaryWeapon = _armoryService.GetItem(dbLoadOut.PrimaryWeapon);
             if (dbLoadOut.PrimaryWeaponMods.Length > 0)
             {

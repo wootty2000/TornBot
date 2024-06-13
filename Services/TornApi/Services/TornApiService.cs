@@ -584,6 +584,20 @@ public class TornApiService
     }
 
     /// <summary>
+    /// Attempt to get the Player's Id from an Api Key
+    /// </summary>
+    /// <param name="apiKey">Api Key</param>
+    public string GetPlayerId(string apiKey)
+    {
+        using IServiceScope serviceProviderScoped = _serviceProvider.CreateScope();
+        using DatabaseContext dbContext = serviceProviderScoped.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        var dbApiKeys = dbContext.ApiKeys.First(ak => ak.TornApiKey == apiKey);
+
+        return dbApiKeys.PlayerId.ToString();
+    }
+
+    /// <summary>
     /// Attempts to gets the Faction's general information from Torn's API
     /// </summary>
     /// <param name="id">Torn Player id</param>

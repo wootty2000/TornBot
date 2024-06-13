@@ -57,7 +57,8 @@ public class LoadOutController : ControllerBase
         //{ "error": { "code" => 2, "error" => "Invalid API key" }}
         return BadRequest(Common.Common.GetErrorInvalidAPIKey());
     }
-    // GET api/<SpyController>/1234?key=ApiKey
+    
+    // GET api/<LoadOutController>/1234?key=ApiKey
     [HttpGet("{id}")]
     public IActionResult Get([FromRoute] LoadOutGetModel model)
     {
@@ -73,10 +74,10 @@ public class LoadOutController : ControllerBase
         
         return Ok(loadOut);
     }
-
-
-    [HttpPost]
-    public IActionResult Post([FromBody] JsonElement jsonElement)
+    
+    [HttpPost("{id}")]
+    [LoadOutPostResultFilter]
+    public IActionResult Post([FromRoute] LoadOutPostModel loadOutPostModel)
     {
         if (!Request.Headers.TryGetValue("X-API-Key", out var apiKey))
         {

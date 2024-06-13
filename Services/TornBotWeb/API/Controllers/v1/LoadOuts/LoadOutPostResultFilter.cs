@@ -15,21 +15,25 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace TornBot.Entities;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 
-public class LoadOut
+namespace TornBot.Services.TornBotWeb.API.Controllers.v1.LoadOuts;
+
+public class LoadOutPostResultFilter : Attribute, IResultFilter
 {
-    public ArmoryItem PrimaryWeapon { get; set; }
-    public ArmoryItem SecondaryWeapon { get; set; }
-    public ArmoryItem MeleeWeapon { get; set; }
-    public ArmoryItem TempWeapon { get; set; }
-    
-    public ArmoryItem HelmetArmor { get; set; }
-    public ArmoryItem ChestArmor { get; set; }
-    public ArmoryItem PantsArmor { get; set; }
-    public ArmoryItem GlovesArmor { get; set; }
-    public ArmoryItem BootsArmor { get; set; }
-    
-    public DateTime Timestamp { get; set; }
-    
+    public void OnResultExecuting(ResultExecutingContext context)
+    {
+        if (context.ModelState.IsValid)
+            return;
+
+        ObjectResult response = new BadRequestObjectResult(Common.Common.GetErrorInvalidAPIKey());
+        response.StatusCode = 422;
+
+        context.Result = response;
+    }
+
+    public void OnResultExecuted(ResultExecutedContext context)
+    {
+    }
 }

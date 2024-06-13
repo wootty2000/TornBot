@@ -15,21 +15,23 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace TornBot.Entities;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
 
-public class LoadOut
+namespace TornBot.Services.TornBotWeb.API.Controllers.v1.LoadOuts;
+
+public class LoadOutPostModel
 {
-    public ArmoryItem PrimaryWeapon { get; set; }
-    public ArmoryItem SecondaryWeapon { get; set; }
-    public ArmoryItem MeleeWeapon { get; set; }
-    public ArmoryItem TempWeapon { get; set; }
-    
-    public ArmoryItem HelmetArmor { get; set; }
-    public ArmoryItem ChestArmor { get; set; }
-    public ArmoryItem PantsArmor { get; set; }
-    public ArmoryItem GlovesArmor { get; set; }
-    public ArmoryItem BootsArmor { get; set; }
-    
-    public DateTime Timestamp { get; set; }
+    [Required]
+    public string id { get; set; }
+
+    [Required]
+    [FromQuery(Name = "key")]
+    public string key { get; set; }
+
+    [Required]
+    [FromBody]
+    public JsonElement jsonElement { get; set; }
     
 }
