@@ -17,6 +17,7 @@
 
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using TornBot.Entities;
 using TornBot.Services.Players.Service;
 using TornBot.Services.TornApi.Services;
@@ -30,13 +31,15 @@ namespace TornBot.Services.TornBotWeb.API.Controllers.v1.LoadOuts;
 [ApiController]
 public class LoadOutController : ControllerBase
 {
+    private readonly ILogger<LoadOutController> _logger;
     private readonly TornApiService _tornApiService;
     private readonly PlayersService _playersService;
     
     private readonly JsonSerializerOptions _options;
 
-    public LoadOutController(TornApiService tornApiService, PlayersService playersService)
+    public LoadOutController(ILogger<LoadOutController> logger, TornApiService tornApiService, PlayersService playersService)
     {
+        _logger = logger;
         _tornApiService = tornApiService;
         _playersService = playersService;
         
@@ -79,13 +82,8 @@ public class LoadOutController : ControllerBase
     [LoadOutPostResultFilter]
     public IActionResult Post([FromRoute] LoadOutPostModel loadOutPostModel)
     {
-        if (!Request.Headers.TryGetValue("X-API-Key", out var apiKey))
-        {
-            return BadRequest(Common.Common.GetErrorInvalidAPIKey());
-        }
-
         // Validate the API key
-        if (!_tornApiService.IsApiKeyFromHomeFaction(apiKey))
+        if (!_tornApiService.IsApiKeyFromHomeFaction(loadOutPostModel.key))
         {
             return BadRequest(Common.Common.GetErrorInvalidAPIKey());
         }
@@ -93,13 +91,26 @@ public class LoadOutController : ControllerBase
         LoadOutModel loadOutPost;
         try
         {
-            loadOutPost = JsonSerializer.Deserialize<LoadOutModel>(jsonElement.GetRawText(), _options);
+            loadOutPost = JsonSerializer.Deserialize<LoadOutModel>(loadOutPostModel.jsonElement.GetRawText(), _options);
         }
         catch (JsonException ex)
         {
-            return BadRequest(ex.Message);
+            string[] data = [loadOutPostModel.id, _tornApiService.GetPlayerId(loadOutPostModel.key)];
+            _logger.LogError(ex, "Error deserializing LoadOut json. Req Id {id}. Key Owner {owner}", data); 
+            
+            return BadRequest(InvalidLoadOutData());
         }
 
+        //Make sure the LoadOut is for the Id
+        UInt32 playerId = UInt32.Parse(loadOutPost.DefenderUser.UserID.ToString());
+        if (UInt32.Parse(loadOutPostModel.id) != playerId)
+        {
+            string[] data = [loadOutPostModel.id, playerId.ToString(), _tornApiService.GetPlayerId(loadOutPostModel.key)];
+            _logger.LogError("Error deserializing LoadOut json. Req Id {id}. LoadOut Id {id2}. Key Owner {owner}", data); 
+
+            return BadRequest(InvalidLoadOutData());
+        }
+        
         LoadOut loadOut = new TornBot.Entities.LoadOut();
 
         foreach (var defenderItem in loadOutPost.DefenderItems)
@@ -143,7 +154,6 @@ public class LoadOutController : ControllerBase
             }
         }
         
-        UInt32 playerId = UInt32.Parse(loadOutPost.DefenderUser.UserID.ToString());
         _playersService.RecordPlayerLoadOut(playerId, loadOut);
         
         Console.Write(loadOut.ToString());
@@ -209,5 +219,17 @@ public class LoadOutController : ControllerBase
         itemRankedWarBonus.Description = bonus.Desc;
 
         return itemRankedWarBonus;
+    }
+
+    private object InvalidLoadOutData()
+    {
+        return new
+        {
+            error = new
+            {
+                code = 2,
+                error = "Invalid LoadOut data"
+            }
+        };
     }
 }
