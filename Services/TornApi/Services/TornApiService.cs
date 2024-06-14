@@ -779,5 +779,82 @@ public class TornApiService
         }
     }
     
+    /// <summary>
+    /// Attempts to get Armory Item data
+    /// </summary>
+    /// <param name="uid">Uid of Armory Item to fetch</param>
+    /// <returns>TornBot.Entities.ArmoryItem</returns>
+    /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
+    public TornBot.Entities.ArmoryItem GetItem(UInt64 uid)
+    {
+        //Loop until we get a valid response or run out of API keys or a other API call failure
+        while (true)
+        {
+            string key = null;
+                
+            try
+            {
+                key = GetNextKey(AccessLevel.Public);
+
+                return GetItem(uid, key);
+            }
+            catch (ApiCallFailureException e)
+            {
+                if (e.InnerException is not null)
+                {
+                    if (e.InnerException is InvalidKeyException)
+                    {
+                        MarkApiKeyInvalid(key!);
+                        continue;
+                    } 
+                    else if (e.InnerException is ApiKeyOwnerInactiveException)
+                    {
+                        MarkApiKeyInactive(key!);
+                        continue;
+                    }
+                    else
+                    {
+                        throw;
+                    }
+
+                }
+            }
+            catch (Exception e)
+            {
+                throw new ApiCallFailureException("Error in Torn API GetPlayer(UInt32 id)", e);
+            }
+        }
+    }
+
+    
+    /// <summary>
+    /// Attempts to get Armory Item data
+    /// </summary>
+    /// <param name="uid">Uid of Armory Item to fetch</param>
+    /// <param name="apiKey">Api Key to use</param>
+    /// <returns>TornBot.Entities.ArmoryItem</returns>
+    /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
+    public TornBot.Entities.ArmoryItem GetItem(UInt64 uid, string apiKey)
+    {
+        string url = String.Format("torn/{0}?selections=itemdetails&key={1}&comment=TornBot", uid, apiKey);
+
+        try
+        {        
+            string apiResponse = MakeApiRequest(url);
+
+            TornApi.Entities.Torn.ItemDetails item = JsonSerializer.Deserialize<TornApi.Entities.Torn.ItemDetails>(apiResponse);
+            
+            return item.ToArmoryItem();
+        }
+        catch (ApiCallFailureException)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            //TODO log this correctly
+            throw new ApiCallFailureException("Error deserializing torn player data", e);
+        }
+    }
     
 }

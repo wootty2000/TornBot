@@ -30,26 +30,39 @@ public class ArmoryService
         _database = databaseContext;
     }
 
-    public bool CheckItemInDatabase(TornBot.Entities.ArmoryItem armoryItem)
+    public bool CheckItemInDatabase(ArmoryItem armoryItem)
     {
-        return _database.ArmoryItems.Any(ai => ai.Uid == armoryItem.Uid);
+        // There is no point in storing individual temp items. 
+        // They are not unique and we do not want to store thousands of HEGs for example. 
+        if (armoryItem.Type == ArmoryItem.ItemType.Temporary)
+            return _database.ArmoryItems.Any(ai => ai.Id == armoryItem.Id);
+        else
+            return _database.ArmoryItems.Any(ai => ai.Uid == armoryItem.Uid);
     }
     
     public void AddItem(TornBot.Entities.ArmoryItem armoryItem)
     {
-        // TODO - We should probably pull this from the API instead. Armor items are missing Armor and Quality values
         TornBot.Services.Database.Entities.ArmoryItems dbArmoryItems = new TornBot.Services.Database.Entities.ArmoryItems();
-        
-        dbArmoryItems.Uid = armoryItem.Uid;
+
+        // There is no point in storing individual temp items. 
+        // They are not unique and we do not want to store thousands of HEGs for example. 
+        if (armoryItem.Type == ArmoryItem.ItemType.Temporary)
+            dbArmoryItems.Uid = armoryItem.Id;
+        else
+            dbArmoryItems.Uid = armoryItem.Uid;
+
         dbArmoryItems.Id = armoryItem.Id;
         dbArmoryItems.Name = armoryItem.Name;
+        dbArmoryItems.Type = (byte)armoryItem.Type;
         dbArmoryItems.Color = (byte)armoryItem.Color;
         dbArmoryItems.Damage = armoryItem.Damage;
         dbArmoryItems.Accuracy = armoryItem.Accuracy;
+        dbArmoryItems.Armor = armoryItem.Armor;
+        dbArmoryItems.Quality = armoryItem.Quality;
 
         ArmoryItemRWBonus bonus;
             
-        //If the weapon has a 1st RW bonus
+        //If the item has a 1st RW bonus
         if (armoryItem.Bonuses.Count > 0)
         {
             dbArmoryItems.BonusId1 = armoryItem.Bonuses[0].Id;
@@ -72,12 +85,9 @@ public class ArmoryService
 
                 _database.ArmoryItemRWBonus.Add(bonus);
             }
-            
-            
-            _database.ArmoryItems.Add(dbArmoryItems);
         }
 
-        //If the weapon has a 2nd RW bonus
+        //If the item has a 2nd RW bonus
         if (armoryItem.Bonuses.Count > 1)
         {
             dbArmoryItems.BonusId2 = armoryItem.Bonuses[1].Id;
@@ -100,7 +110,7 @@ public class ArmoryService
             }
         }
 
-        //If the weapon has a 3rd RW bonus. Dont think this exists, but best to be safe
+        //If the item has a 3rd RW bonus. Dont think this exists, but best to be safe
         if (armoryItem.Bonuses.Count > 2)
         {
             dbArmoryItems.BonusId3 = armoryItem.Bonuses[2].Id;
@@ -123,31 +133,56 @@ public class ArmoryService
             }
         }
         
+        _database.ArmoryItems.Add(dbArmoryItems);
         _database.SaveChanges();
+       
     }
 
-    public TornBot.Entities.ArmoryItem GetItem(UInt64 itemUid)
+    public TornBot.Entities.ArmoryItem GetItem(UInt64 uid, bool isTemporaryWeapon = false)
     {
-        Database.Entities.ArmoryItems? dbItem = _database.ArmoryItems.FirstOrDefault(ai => ai.Uid == itemUid);
-        TornBot.Entities.ArmoryItem item = new TornBot.Entities.ArmoryItem();
+        Database.Entities.ArmoryItems? dbItem;
+        
+        // There is no point in storing individual temp items. 
+        // They are not unique and we do not want to store thousands of HEGs for example. 
+        if (isTemporaryWeapon)
+            dbItem = _database.ArmoryItems.FirstOrDefault(ai => ai.Id == uid);
+        else
+            dbItem = _database.ArmoryItems.FirstOrDefault(ai => ai.Uid == uid);
 
+        TornBot.Entities.ArmoryItem item = new TornBot.Entities.ArmoryItem();
+        
         if (dbItem == null)
         {
-            item.Uid = itemUid;
-            item.Id = 0;
-            item.Name = "Unknown Item";
+            if (isTemporaryWeapon)
+            {
+                item.Uid = 0;
+                item.Id = (UInt16)uid;
+                item.Name = "Unkown Temp Item";
+            }
+            else
+            {
+                item.Uid = uid;
+                item.Id = 0;
+                item.Name = "Unknown Item";
+            }
             item.Color = 0;
             
             //TODO - Pull the item from Torn API instead of giving an unknown item
             return item;
         }
         
-        item.Uid = dbItem.Uid;
+        if (isTemporaryWeapon)
+            item.Uid = 0;
+        else
+            item.Uid = dbItem.Uid;
         item.Id = dbItem.Id;
         item.Name = dbItem.Name;
+        item.Type = (TornBot.Entities.ArmoryItem.ItemType)dbItem.Type;
+        item.Color = (TornBot.Entities.ArmoryItem.ItemColor)dbItem.Color;
         item.Damage = dbItem.Damage;
         item.Accuracy = dbItem.Accuracy;
-        item.Color = (TornBot.Entities.ArmoryItem.ItemColor)dbItem.Color;
+        item.Armor = dbItem.Armor;
+        item.Quality = dbItem.Quality;
         if (dbItem.BonusId1 > 0)
             item.Bonuses.Add(GetItemRWBonus(dbItem.BonusId1, dbItem.BonusVal1));
         if (dbItem.BonusId2 > 0)

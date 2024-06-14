@@ -116,40 +116,121 @@ public class LoadOutController : ControllerBase
         foreach (var defenderItem in loadOutPost.DefenderItems)
         {
             Item item = defenderItem.Value.Item[0];
-
+            
             switch (item.EquipSlot)
             {
-                //Weapons
+                // Weapons
+                // Primary
                 case "1":
-                    loadOut.PrimaryWeapon = DecodeArmoryItem(item);
+                    try
+                    {
+                        loadOut.PrimaryWeapon = _tornApiService.GetItem(UInt64.Parse(item.ArmoryID)).ToArmoryItemPrimaryWeapon();
+                    }
+                    catch
+                    {
+                        loadOut.PrimaryWeapon = DecodeArmoryItem(item).ToArmoryItemPrimaryWeapon();
+                    }
+
                     loadOut.PrimaryWeapon.Mods = DecodeWeaponMods(item);
                     break;
+                
+                // Secondary
                 case "2":
-                    loadOut.SecondaryWeapon = DecodeArmoryItem(item);
+                    try
+                    {
+                        loadOut.SecondaryWeapon = _tornApiService.GetItem(UInt64.Parse(item.ArmoryID)).ToArmoryItemSecondaryWeapon();
+                    }
+                    catch
+                    {
+                        loadOut.SecondaryWeapon = DecodeArmoryItem(item).ToArmoryItemSecondaryWeapon();
+                    }
+                    
                     loadOut.SecondaryWeapon.Mods = DecodeWeaponMods(item);
                     break;
+                
+                // Melee
                 case "3":
-                    loadOut.MeleeWeapon = DecodeArmoryItem(item);
-                    break;
-                case "5":
-                    loadOut.TempWeapon = DecodeArmoryItem(item);
+                    try
+                    {
+                        loadOut.MeleeWeapon = _tornApiService.GetItem(UInt64.Parse(item.ArmoryID)).ToArmoryItemMeleeWeapon();
+                    }
+                    catch
+                    {
+                        loadOut.MeleeWeapon = DecodeArmoryItem(item).ToArmoryItemMeleeWeapon();
+                    }
                     break;
                 
-                //Armor
+                // Temporary
+                case "5":
+                    try
+                    {
+                        loadOut.TempWeapon = _tornApiService.GetItem(UInt64.Parse(item.ArmoryID)).ToArmoryItemTemporaryWeapon();
+                    }
+                    catch
+                    {
+                        loadOut.TempWeapon = DecodeArmoryItem(item).ToArmoryItemTemporaryWeapon();
+                    }
+                    break;
+                
+                // Armor
+                // Helmet
                 case "6":
-                    loadOut.HelmetArmor = DecodeArmoryItem(item);
+                    try
+                    {
+                        loadOut.HelmetArmor = _tornApiService.GetItem(UInt64.Parse(item.ArmoryID)).ToArmoryItemDefensive();
+                    }
+                    catch
+                    {
+                        loadOut.HelmetArmor = DecodeArmoryItem(item).ToArmoryItemDefensive();
+                    }
                     break;
+
+                // Chest
                 case "4":
-                    loadOut.ChestArmor = DecodeArmoryItem(item);
+                    try
+                    {
+                        loadOut.ChestArmor = _tornApiService.GetItem(UInt64.Parse(item.ArmoryID)).ToArmoryItemDefensive();
+                    }
+                    catch
+                    {
+                        loadOut.ChestArmor = DecodeArmoryItem(item).ToArmoryItemDefensive();
+                    }
                     break;
+                
+                // Pants
                 case "7":
-                    loadOut.PantsArmor = DecodeArmoryItem(item);
+                    try
+                    {
+                        loadOut.PantsArmor = _tornApiService.GetItem(UInt64.Parse(item.ArmoryID)).ToArmoryItemDefensive();
+                    }
+                    catch
+                    {
+                        loadOut.PantsArmor = DecodeArmoryItem(item).ToArmoryItemDefensive();
+                    }
                     break;
+                
+                // Gloves
                 case "9":
-                    loadOut.GlovesArmor = DecodeArmoryItem(item);
+                    try
+                    {
+                        loadOut.GlovesArmor = _tornApiService.GetItem(UInt64.Parse(item.ArmoryID)).ToArmoryItemDefensive();
+                    }
+                    catch
+                    {
+                        loadOut.GlovesArmor = DecodeArmoryItem(item).ToArmoryItemDefensive();
+                    }
                     break;
+                
+                // Boots
                 case "8":
-                    loadOut.BootsArmor = DecodeArmoryItem(item);
+                    try
+                    {
+                        loadOut.BootsArmor = _tornApiService.GetItem(UInt64.Parse(item.ArmoryID)).ToArmoryItemDefensive();
+                    }
+                    catch
+                    {
+                        loadOut.BootsArmor = DecodeArmoryItem(item).ToArmoryItemDefensive();
+                    }
                     break;
             }
         }

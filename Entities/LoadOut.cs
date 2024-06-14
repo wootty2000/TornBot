@@ -19,16 +19,16 @@ namespace TornBot.Entities;
 
 public class LoadOut
 {
-    public ArmoryItem PrimaryWeapon { get; set; }
-    public ArmoryItem SecondaryWeapon { get; set; }
-    public ArmoryItem MeleeWeapon { get; set; }
-    public ArmoryItem TempWeapon { get; set; }
+    public ArmoryItemPrimaryWeapon PrimaryWeapon { get; set; }
+    public ArmoryItemSecondaryWeapon SecondaryWeapon { get; set; }
+    public ArmoryItemMeleeWeapon MeleeWeapon { get; set; }
+    public ArmoryItemTemporaryWeapon TempWeapon { get; set; }
     
-    public ArmoryItem HelmetArmor { get; set; }
-    public ArmoryItem ChestArmor { get; set; }
-    public ArmoryItem PantsArmor { get; set; }
-    public ArmoryItem GlovesArmor { get; set; }
-    public ArmoryItem BootsArmor { get; set; }
+    public ArmoryItemDefensive HelmetArmor { get; set; }
+    public ArmoryItemDefensive ChestArmor { get; set; }
+    public ArmoryItemDefensive PantsArmor { get; set; }
+    public ArmoryItemDefensive GlovesArmor { get; set; }
+    public ArmoryItemDefensive BootsArmor { get; set; }
     
     public DateTime Timestamp { get; set; }
     

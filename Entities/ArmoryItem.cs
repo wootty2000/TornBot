@@ -19,6 +19,16 @@ namespace TornBot.Entities;
 
 public class ArmoryItem
 {
+    public enum ItemType
+    {
+        Unknown = 0,
+        Primary = 1,
+        Secondary = 2,
+        Melee = 3,
+        Temporary = 4,
+        Defensive = 5
+    }
+    
     public enum ItemColor
     {
         None = 0,
@@ -37,11 +47,91 @@ public class ArmoryItem
     public UInt16 Id { get; set; }
     public string Name { get; set; }
 
+    public ItemType Type { get; set; }
     public ItemColor Color { get; set; }
-    public List<ItemRankedWarBonus> Bonuses { get; set; }
-
+    
     public Single Damage { get; set; }
     public Single Accuracy { get; set; }
+    public Single Armor { get; set; }
+    public Single Quality { get; set; }
+
+    public List<ItemRankedWarBonus> Bonuses { get; set; }
+    
     public List<WeaponMod> Mods { get; set; }
+
+    public ArmoryItemPrimaryWeapon ToArmoryItemPrimaryWeapon()
+    {
+        return new ArmoryItemPrimaryWeapon
+        {
+            Uid = Uid,
+            Id = Id,
+            Name = Name,
+            Color = Color,
+            Damage = Damage,
+            Accuracy = Accuracy,
+            Quality = Quality,
+            Bonuses = Bonuses,
+            Mods = Mods
+        };
+    }
+
+    public ArmoryItemSecondaryWeapon ToArmoryItemSecondaryWeapon()
+    {
+        return new ArmoryItemSecondaryWeapon
+        {
+            Uid = Uid,
+            Id = Id,
+            Name = Name,
+            Color = Color,
+            Damage = Damage,
+            Accuracy = Accuracy,
+            Quality = Quality,
+            Bonuses = Bonuses,
+            Mods = Mods
+        };
+    }
+
+    public ArmoryItemMeleeWeapon ToArmoryItemMeleeWeapon()
+    {
+        return new ArmoryItemMeleeWeapon
+        {
+            Uid = Uid,
+            Id = Id,
+            Name = Name,
+            Color = Color,
+            Damage = Damage,
+            Accuracy = Accuracy,
+            Quality = Quality,
+            Bonuses = Bonuses
+        };
+    }
+
+    public ArmoryItemTemporaryWeapon ToArmoryItemTemporaryWeapon()
+    {
+        return new ArmoryItemTemporaryWeapon
+        {
+            Uid = Uid,
+            Id = Id,
+            Name = Name,
+            Color = Color,
+            Damage = Damage,
+            Accuracy = Accuracy,
+            Quality = Quality
+        };
+    }
+
+    public ArmoryItemDefensive ToArmoryItemDefensive()
+    {
+        return new ArmoryItemDefensive
+        {
+            Uid = Uid,
+            Id = Id,
+            Name = Name,
+            Color = Color,
+            Armor = Armor,
+            Quality = Quality,
+            Bonuses = Bonuses
+        };
+    }
 
 }
