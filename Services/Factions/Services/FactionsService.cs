@@ -82,7 +82,7 @@ public class FactionsService : IHostedService
         List<Entities.TornPlayer> tornPlayerExtRevivableList = new List<Entities.TornPlayer>();
 
         //TODO = Move this to the DB
-        UInt32 homeFactionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
+        UInt32 homeFactionId = GetHomeFactionId();
 
         TornApi.Entities.Faction faction = _tornApiService.GetFaction(factionID);
 
@@ -223,6 +223,11 @@ public class FactionsService : IHostedService
         return tornPlayerExtRevivableList; 
     }
 
+    public UInt32 GetHomeFactionId()
+    {
+        //TODO = Move this to the DB
+        return _config.GetValue<UInt32>("TornFactionId"); //get faction id
+    }
     
     public Task StartAsync(CancellationToken cancellationToken)
     {

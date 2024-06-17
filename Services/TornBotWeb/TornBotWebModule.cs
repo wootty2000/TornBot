@@ -20,6 +20,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
 using TornBot.Services.TornBotWeb.Services;
 using TornBot.Services.TornStatsApi.Services;
 
@@ -38,7 +39,9 @@ namespace TornBot.Services.TornBotWeb
 
             services.AddControllers();
             services.AddEndpointsApiExplorer();
+
             services.AddSwaggerGen();
+            
             services.AddAuthorization();
 
             services.AddSingleton<TornBotWebService>();

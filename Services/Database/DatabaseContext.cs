@@ -34,6 +34,10 @@ namespace TornBot.Services.Database
         public DbSet<BattleStats> BattleStats { get; set; }
         public DbSet<ApiKeys> ApiKeys { get; set; }
         public DbSet<LogEntry> LogEntries { get; set; }
+        public DbSet<ArmoryItems> ArmoryItems { get; set; }
+        public DbSet<ArmoryItemRWBonus> ArmoryItemRWBonus { get; set; }
+        public DbSet<LoadOuts> LoadOuts { get; set; }
+        public DbSet<WeaponMods> WeaponMods { get; set; }
 
         public DatabaseContext(DbContextOptions<DatabaseContext> options)
             : base(options)
