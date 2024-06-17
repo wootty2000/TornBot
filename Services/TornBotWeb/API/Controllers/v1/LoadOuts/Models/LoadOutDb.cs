@@ -15,24 +15,11 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-using System.ComponentModel.DataAnnotations;
+namespace TornBot.Services.TornBotWeb.API.Controllers.v1.LoadOuts.Models;
 
-namespace TornBot.Services.Database.Entities;
-
-public class LoadOuts
+public class LoadOutDb
 {
-    [Key]
-    public UInt32 PlayerId { get; set; }
-    public DateTime Timestamp { get; set; }
-    public UInt64? PrimaryWeapon { get; set; }
-    public string? PrimaryWeaponMods { get; set; }
-    public UInt64? SecondaryWeapon { get; set; }
-    public string? SecondaryWeaponMods { get; set; }
-    public UInt64? MeleeWeapon { get; set; }
-    public UInt64? TemporaryWeapon { get; set; }
-    public UInt64? HelmetArmor { get; set; }
-    public UInt64? ChestArmor { get; set; }
-    public UInt64? PantsArmor { get; set; }
-    public UInt64? GlovesArmor { get; set; }
-    public UInt64? BootsArmor { get; set; }
+    public DefenderUser DefenderUser { get; set; }
+    public Dictionary<string, DefenderItemDetails> DefenderItems { get; set; }
+    public Dictionary<string, string> DefenderAmmoStatus { get; set; }
 }

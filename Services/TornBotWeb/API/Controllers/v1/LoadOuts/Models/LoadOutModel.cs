@@ -22,7 +22,6 @@ namespace TornBot.Services.TornBotWeb.API.Controllers.v1.LoadOuts.Models;
 
 public class LoadOutModel
 {
-    public DefenderUser DefenderUser { get; set; }
-    public Dictionary<string, DefenderItemDetails> DefenderItems { get; set; }
-    public Dictionary<string, string> DefenderAmmoStatus { get; set; }
+    [JsonPropertyName("DB")]
+    public LoadOutDb Db { get; set; }
 }

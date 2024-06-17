@@ -306,9 +306,16 @@ namespace TornBot.Services.Players.Service
             }
         }
         
+        /// <summary>
+        /// Records a player's Load Out
+        /// </summary>
+        /// <param name="playerId">Torn Player id</param>
+        /// <param name="loadOut">Deserialised and specific parts of the json load out</param>
+        /// <returns>void</returns>
         public void RecordPlayerLoadOut(UInt32 playerId, LoadOut loadOut)
         {
-            Database.Entities.LoadOuts dbLoadOuts = _database.LoadOuts.FirstOrDefault(lo => lo.PlayerId == playerId);
+            Database.Entities.LoadOuts? dbLoadOuts = _database.LoadOuts.FirstOrDefault(lo => lo.PlayerId == playerId);
+            
             bool newLoadOut = false;
             if (dbLoadOuts == null)
             {
@@ -328,21 +335,26 @@ namespace TornBot.Services.Players.Service
 
                 dbLoadOuts.PrimaryWeapon = loadOut.PrimaryWeapon.Uid;
 
-                mods = "";
+                mods = null;
                 foreach (var mod in loadOut.PrimaryWeapon.Mods)
                 {
                     if (!_armoryService.CheckWeaponModInDatabase(mod))
                         _armoryService.AddWeaponMod(mod);
 
-                    if (mods == "")
+                    if (mods == null)
                         mods = mod.Id.ToString();
                     else
-                        mods += String.Format(",{0}", mod.Id.ToString());
+                        mods = String.Format("{0},{1}", mods, mod.Id.ToString());
                 }
 
                 dbLoadOuts.PrimaryWeaponMods = mods;
             }
-            
+            else
+            {
+                dbLoadOuts.PrimaryWeapon = null;
+                dbLoadOuts.PrimaryWeaponMods = null;
+            }
+
             if (loadOut.SecondaryWeapon != null)
             {
                 if (!_armoryService.CheckItemInDatabase(loadOut.SecondaryWeapon.ToArmoryItem()))
@@ -350,21 +362,26 @@ namespace TornBot.Services.Players.Service
 
                 dbLoadOuts.SecondaryWeapon = loadOut.SecondaryWeapon.Uid;
 
-                mods = "";
+                mods = null;
                 foreach (var mod in loadOut.SecondaryWeapon.Mods)
                 {
                     if (!_armoryService.CheckWeaponModInDatabase(mod))
                         _armoryService.AddWeaponMod(mod);
                     
-                    if (mods == "")
+                    if (mods == null)
                         mods = mod.Id.ToString();
                     else
-                        mods += String.Format(",{0}", mod.Id.ToString());
+                        mods = String.Format("{0},{1}", mods, mod.Id.ToString());
                 }
 
                 dbLoadOuts.SecondaryWeaponMods = mods;
             }
-            
+            else
+            {
+                dbLoadOuts.SecondaryWeapon = null;
+                dbLoadOuts.SecondaryWeaponMods = null;
+            }
+
             if (loadOut.MeleeWeapon != null)
             {
                 if (!_armoryService.CheckItemInDatabase(loadOut.MeleeWeapon.ToArmoryItem()))
@@ -372,7 +389,9 @@ namespace TornBot.Services.Players.Service
 
                 dbLoadOuts.MeleeWeapon = loadOut.MeleeWeapon.Uid;
             }
-            
+            else
+                dbLoadOuts.MeleeWeapon = null;
+
             if (loadOut.TempWeapon != null)
             {
                 if (!_armoryService.CheckItemInDatabase(loadOut.TempWeapon.ToArmoryItem()))
@@ -381,6 +400,8 @@ namespace TornBot.Services.Players.Service
                 // We dont store Temp weapons by UID, only ID as they are not unique
                 dbLoadOuts.TemporaryWeapon = loadOut.TempWeapon.Id;
             }
+            else
+                dbLoadOuts.TemporaryWeapon = null;
             
             // - Armor
             
@@ -393,7 +414,9 @@ namespace TornBot.Services.Players.Service
                 
                 dbLoadOuts.HelmetArmor = loadOut.HelmetArmor.Uid;
             }
-            
+            else
+                dbLoadOuts.HelmetArmor = null;
+
             if (loadOut.ChestArmor != null)
             {
                 if (!_armoryService.CheckItemInDatabase(loadOut.ChestArmor.ToArmoryItem()))
@@ -403,7 +426,9 @@ namespace TornBot.Services.Players.Service
                 
                 dbLoadOuts.ChestArmor = loadOut.ChestArmor.Uid;
             }
-            
+            else
+                dbLoadOuts.ChestArmor = null;
+
             if (loadOut.PantsArmor != null)
             {
                 if (!_armoryService.CheckItemInDatabase(loadOut.PantsArmor.ToArmoryItem()))
@@ -413,7 +438,9 @@ namespace TornBot.Services.Players.Service
                 
                 dbLoadOuts.PantsArmor = loadOut.PantsArmor.Uid;
             }
-            
+            else
+                dbLoadOuts.PantsArmor = null;
+
             if (loadOut.GlovesArmor != null)
             {
                 if (!_armoryService.CheckItemInDatabase(loadOut.GlovesArmor.ToArmoryItem()))
@@ -423,16 +450,20 @@ namespace TornBot.Services.Players.Service
                 
                 dbLoadOuts.GlovesArmor = loadOut.GlovesArmor.Uid;
             }
-            
+            else
+                dbLoadOuts.GlovesArmor = null;
+
             if (loadOut.BootsArmor != null)
             {
-                if (!_armoryService.CheckItemInDatabase(loadOut.BootsArmor.ToArmoryItem()))                         
+                if (!_armoryService.CheckItemInDatabase(loadOut.BootsArmor.ToArmoryItem()))
                 {
                     _armoryService.AddItem(loadOut.BootsArmor.ToArmoryItem());
                 }
                 
                 dbLoadOuts.BootsArmor = loadOut.BootsArmor.Uid;
             }
+            else
+                dbLoadOuts.BootsArmor = null;
 
             if (newLoadOut)
                 _database.LoadOuts.Add(dbLoadOuts);
@@ -442,10 +473,15 @@ namespace TornBot.Services.Players.Service
             _database.SaveChanges();
         }
 
+        /// <summary>
+        /// Get a player's Load Out
+        /// </summary>
+        /// <param name="playerId">Torn Player id</param>
+        /// <returns>TornBot.Entities.LoadOut</returns>
         public TornBot.Entities.LoadOut GetPlayerLoadOut(UInt32 playerId)
         {
             TornBot.Entities.LoadOut loadOut = new LoadOut();
-            Database.Entities.LoadOuts dbLoadOut = _database.LoadOuts.FirstOrDefault(lo => lo.PlayerId == playerId);
+            Database.Entities.LoadOuts? dbLoadOut = _database.LoadOuts.FirstOrDefault(lo => lo.PlayerId == playerId);
 
             if (dbLoadOut == null)
             {
@@ -454,30 +490,50 @@ namespace TornBot.Services.Players.Service
 
             loadOut.Timestamp = dbLoadOut.Timestamp;
 
-            loadOut.PrimaryWeapon = _armoryService.GetItem(dbLoadOut.PrimaryWeapon).ToArmoryItemPrimaryWeapon();
-            if (dbLoadOut.PrimaryWeaponMods.Length > 0)
+            if (dbLoadOut.PrimaryWeapon != null)
             {
-                foreach (var id in dbLoadOut.PrimaryWeaponMods.Split(","))
+                loadOut.PrimaryWeapon = _armoryService.GetItem(dbLoadOut.PrimaryWeapon.Value).ToArmoryItemPrimaryWeapon();
+                if (dbLoadOut.PrimaryWeaponMods != null)
                 {
-                    loadOut.PrimaryWeapon.Mods.Add(_armoryService.GetWeaponMod(UInt16.Parse(id)));
+                    foreach (var id in dbLoadOut.PrimaryWeaponMods.Split(","))
+                    {
+                        loadOut.PrimaryWeapon.Mods.Add(_armoryService.GetWeaponMod(UInt16.Parse(id)));
+                    }
                 }
             }
-            loadOut.SecondaryWeapon = _armoryService.GetItem(dbLoadOut.SecondaryWeapon).ToArmoryItemSecondaryWeapon();
-            if (dbLoadOut.SecondaryWeaponMods.Length > 0)
-            {
-                foreach (var id in dbLoadOut.SecondaryWeaponMods.Split(","))
-                {
-                    loadOut.SecondaryWeapon.Mods.Add(_armoryService.GetWeaponMod(UInt16.Parse(id)));
-                }
-            }
-            loadOut.MeleeWeapon = _armoryService.GetItem(dbLoadOut.MeleeWeapon).ToArmoryItemMeleeWeapon();
-            loadOut.TempWeapon = _armoryService.GetItem(dbLoadOut.TemporaryWeapon, true).ToArmoryItemTemporaryWeapon();
 
-            loadOut.HelmetArmor = _armoryService.GetItem(dbLoadOut.HelmetArmor).ToArmoryItemDefensive();
-            loadOut.ChestArmor = _armoryService.GetItem(dbLoadOut.ChestArmor).ToArmoryItemDefensive();
-            loadOut.PantsArmor = _armoryService.GetItem(dbLoadOut.PantsArmor).ToArmoryItemDefensive();
-            loadOut.GlovesArmor = _armoryService.GetItem(dbLoadOut.GlovesArmor).ToArmoryItemDefensive();
-            loadOut.BootsArmor = _armoryService.GetItem(dbLoadOut.BootsArmor).ToArmoryItemDefensive();
+            if (dbLoadOut.SecondaryWeapon != null)
+            {
+                loadOut.SecondaryWeapon = _armoryService.GetItem(dbLoadOut.SecondaryWeapon.Value).ToArmoryItemSecondaryWeapon();
+                if (dbLoadOut.SecondaryWeaponMods != null)
+                {
+                    foreach (var id in dbLoadOut.SecondaryWeaponMods.Split(","))
+                    {
+                        loadOut.SecondaryWeapon.Mods.Add(_armoryService.GetWeaponMod(UInt16.Parse(id)));
+                    }
+                }
+            }
+
+            if (dbLoadOut.MeleeWeapon != null)
+                loadOut.MeleeWeapon = _armoryService.GetItem(dbLoadOut.MeleeWeapon.Value).ToArmoryItemMeleeWeapon();
+
+            if (dbLoadOut.TemporaryWeapon != null)
+                loadOut.TempWeapon = _armoryService.GetItem(dbLoadOut.TemporaryWeapon.Value, true).ToArmoryItemTemporaryWeapon();
+
+            if (dbLoadOut.HelmetArmor != null)
+                loadOut.HelmetArmor = _armoryService.GetItem(dbLoadOut.HelmetArmor.Value).ToArmoryItemDefensive();
+            
+            if (dbLoadOut.ChestArmor != null)
+                loadOut.ChestArmor = _armoryService.GetItem(dbLoadOut.ChestArmor.Value).ToArmoryItemDefensive();
+            
+            if (dbLoadOut.PantsArmor != null)
+                loadOut.PantsArmor = _armoryService.GetItem(dbLoadOut.PantsArmor.Value).ToArmoryItemDefensive();
+            
+            if (dbLoadOut.GlovesArmor != null)
+                loadOut.GlovesArmor = _armoryService.GetItem(dbLoadOut.GlovesArmor.Value).ToArmoryItemDefensive();
+            
+            if (dbLoadOut.BootsArmor != null)
+                loadOut.BootsArmor = _armoryService.GetItem(dbLoadOut.BootsArmor.Value).ToArmoryItemDefensive();
 
             return loadOut;
         }

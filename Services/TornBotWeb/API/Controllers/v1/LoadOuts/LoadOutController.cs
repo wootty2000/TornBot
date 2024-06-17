@@ -48,7 +48,7 @@ public class LoadOutController : ControllerBase
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             Converters =
             {
-                new LoadOutConverter(),
+                //new LoadOutConverter(),
                 new DefenderItemDetailsConverter()
             }
         };
@@ -89,9 +89,11 @@ public class LoadOutController : ControllerBase
         }
         
         LoadOutModel loadOutPost;
+        LoadOutDb loadOutPostDb;
         try
         {
             loadOutPost = JsonSerializer.Deserialize<LoadOutModel>(loadOutPostModel.jsonElement.GetRawText(), _options);
+            loadOutPostDb = loadOutPost.Db;
         }
         catch (JsonException ex)
         {
@@ -102,7 +104,7 @@ public class LoadOutController : ControllerBase
         }
 
         //Make sure the LoadOut is for the Id
-        UInt32 playerId = UInt32.Parse(loadOutPost.DefenderUser.UserID.ToString());
+        UInt32 playerId = UInt32.Parse(loadOutPostDb.DefenderUser.UserID.ToString());
         if (UInt32.Parse(loadOutPostModel.id) != playerId)
         {
             string[] data = [loadOutPostModel.id, playerId.ToString(), _tornApiService.GetPlayerId(loadOutPostModel.key)];
@@ -113,7 +115,7 @@ public class LoadOutController : ControllerBase
         
         LoadOut loadOut = new TornBot.Entities.LoadOut();
 
-        foreach (var defenderItem in loadOutPost.DefenderItems)
+        foreach (var defenderItem in loadOutPostDb.DefenderItems)
         {
             Item item = defenderItem.Value.Item[0];
             

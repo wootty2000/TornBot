@@ -46,14 +46,17 @@ public class LoadOutConverter : JsonConverter<LoadOutModel>
 
                 switch (propertyName)
                 {
+                    case "DB":
+                        loadOutModel.Db = JsonSerializer.Deserialize<LoadOutDb>(ref reader, options);
+                        break;
                     case "defenderUser":
-                        loadOutModel.DefenderUser = JsonSerializer.Deserialize<DefenderUser>(ref reader, options);
+                        loadOutModel.Db.DefenderUser = JsonSerializer.Deserialize<DefenderUser>(ref reader, options);
                         break;
                     case "defenderItems":
-                        loadOutModel.DefenderItems = JsonSerializer.Deserialize<Dictionary<string, DefenderItemDetails>>(ref reader, options);
+                        loadOutModel.Db.DefenderItems = JsonSerializer.Deserialize<Dictionary<string, DefenderItemDetails>>(ref reader, options);
                         break;
                     case "defenderAmmoStatus":
-                        loadOutModel.DefenderAmmoStatus = JsonSerializer.Deserialize<Dictionary<string, string>>(ref reader, options);
+                        loadOutModel.Db.DefenderAmmoStatus = JsonSerializer.Deserialize<Dictionary<string, string>>(ref reader, options);
                         break;
                     default:
                         reader.Skip();
