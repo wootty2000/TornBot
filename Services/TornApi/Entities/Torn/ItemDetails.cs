@@ -55,35 +55,6 @@ public class ItemDetails
             Bonuses = new List<ItemRankedWarBonus>(),
             Mods = new List<WeaponMod>()
         };
-/*
-        TornBot.Entities.ArmoryItem armoryItem = new ArmoryItem();
-
-        armoryItem.Uid = item.Uid;
-        armoryItem.Id = item.Id;
-        armoryItem.Name = item.Name;
-        armoryItem.Type = item.Type switch
-        {
-            "Primary" => ArmoryItem.ItemType.Primary,
-            "Secondary" => ArmoryItem.ItemType.Secondary,
-            "Melee" => ArmoryItem.ItemType.Melee,
-            "Temporary" => ArmoryItem.ItemType.Temporary,
-            "Defense" => ArmoryItem.ItemType.Defensive,
-            _ => ArmoryItem.ItemType.Unknown
-        };
-        armoryItem.Color = item.Rarity switch
-        {
-            "Yellow" => ArmoryItem.ItemColor.Yellow,
-            "Orange" => ArmoryItem.ItemColor.Orange,
-            "Red" => ArmoryItem.ItemColor.Red,
-            _ => ArmoryItem.ItemColor.None
-        };
-        armoryItem.Damage = item.Damage;
-        armoryItem.Accuracy = item.Accuracy;
-        armoryItem.Armor = item.Armor;
-        armoryItem.Quality = item.Quality;
-        armoryItem.Bonuses = new List<ItemRankedWarBonus>();
-        armoryItem.Mods = new List<WeaponMod>();
-        */
         
         foreach (var bonus in item.Bonuses)
         {
