@@ -34,13 +34,17 @@ CREATE TABLE ArmoryItems
     `BonusVal3` int unsigned
 );
 
-CREATE TABLE ArmoryItemRWBonus
+create table ArmoryItemRWBonus
 (
-    `Id` int unsigned NOT NULL,
-    `Value` int unsigned NULL,
-    `Bonus` VARCHAR(255) NOT NULL,
-    `Description` VARCHAR(512) NOT NULL
+    Id          int auto_increment,
+    BonusId     int unsigned not null,
+    Value       int unsigned null,
+    Bonus       varchar(256) not null,
+    Description varchar(512) not null,
+    constraint ArmoryItemRWBonus_pk
+        primary key (Id)
 );
+
 
 CREATE TABLE WeaponMods
 (

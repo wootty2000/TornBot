@@ -20,6 +20,7 @@ namespace TornBot.Services.Database.Entities;
 public class ArmoryItemRWBonus
 {
     public UInt16 Id { get; set; }
+    public UInt16 BonusId { get; set; }
     public string Bonus { get; set; }
     public UInt16? Value { get; set; }
     public string Description { get; set; }
