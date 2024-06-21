@@ -22,6 +22,7 @@ using DSharpPlus.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
+using TornBot.Exceptions;
 using TornBot.Services.Cron.Infrastructure;
 using TornBot.Services.Discord.Services;
 using TornBot.Services.TornApi.Services;
@@ -63,14 +64,15 @@ namespace TornBot.Features.StocksMonitor.Cron
         
         public Task Execute(IJobExecutionContext context)
         {
-            //_logger.LogInformation("Stock update");
-
-            Services.TornApi.Entities.StockResponse stockResponse = tornApiService.GetStocks();
-
-            if (stockResponse == null)
+            Services.TornApi.Entities.StockResponse stockResponse;
+            try
             {
-                _logger.LogError("Stocks update failed due to API error");
-                return null;
+                stockResponse = tornApiService.GetStocks();
+            }
+            catch (ApiCallFailureException e)
+            {
+                _logger.LogInformation("Stocks update failed due to API error");
+                return Task.CompletedTask;
             }
 
             int i = 0;
