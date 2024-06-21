@@ -194,15 +194,16 @@ public class ArmoryService
         if (dbBonus == null)
         {
             bonus.Description = "Unknown RW Bonus. Please report this to the faction leaders";
+            bonus.Title = "Unknown RW Bonus. Please report this to the faction leaders";
         }
         else
         {
-            bonus.Description = String.Format(dbBonus.Description, value);
+            bonus.Description = dbBonus.Description;
+            bonus.Title = dbBonus.Bonus;
         }
         
         bonus.Id = id;
         bonus.Value = value;
-        bonus.Title = dbBonus.Bonus;
 
         return bonus;
     }
