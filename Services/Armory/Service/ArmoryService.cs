@@ -70,10 +70,7 @@ public class ArmoryService
 
             // Bonus with id and value as null, its been manually created to allow for String.Format to add the value correctly
             // We can fall back on id and value if the above hasnt been created
-            if(
-                !_database.ArmoryItemRWBonus.Any(rwb => rwb.BonusId == dbArmoryItems.BonusId1 && rwb.Value == null) && 
-                !_database.ArmoryItemRWBonus.Any(rwb => rwb.BonusId == dbArmoryItems.BonusId1 && rwb.Value == dbArmoryItems.BonusId1)
-            )
+            if(!_database.ArmoryItemRWBonus.Any(rwb => rwb.BonusId == dbArmoryItems.BonusId1 && rwb.Value == dbArmoryItems.BonusVal1))
             {
                 bonus = new ArmoryItemRWBonus
                 {
@@ -93,10 +90,7 @@ public class ArmoryService
             dbArmoryItems.BonusId2 = armoryItem.Bonuses[1].Id;
             dbArmoryItems.BonusVal2 = armoryItem.Bonuses[1].Value;
 
-            if (
-                !_database.ArmoryItemRWBonus.Any(rwb => rwb.BonusId == dbArmoryItems.BonusId2 && rwb.Value == null) &&
-                !_database.ArmoryItemRWBonus.Any(rwb => rwb.BonusId == dbArmoryItems.BonusId2 && rwb.Value == dbArmoryItems.BonusId2)
-            )
+            if (!_database.ArmoryItemRWBonus.Any(rwb => rwb.BonusId == dbArmoryItems.BonusId2 && rwb.Value == dbArmoryItems.BonusVal2))
             {
                 bonus = new ArmoryItemRWBonus
                 {
@@ -116,10 +110,7 @@ public class ArmoryService
             dbArmoryItems.BonusId3 = armoryItem.Bonuses[2].Id;
             dbArmoryItems.BonusVal3 = armoryItem.Bonuses[2].Value;
 
-            if (
-                !_database.ArmoryItemRWBonus.Any(rwb => rwb.BonusId == dbArmoryItems.BonusId3 && rwb.Value == null) &&
-                !_database.ArmoryItemRWBonus.Any(rwb => rwb.BonusId == dbArmoryItems.BonusId3 && rwb.Value == dbArmoryItems.BonusId3)
-            )
+            if (!_database.ArmoryItemRWBonus.Any(rwb => rwb.BonusId == dbArmoryItems.BonusId3 && rwb.Value == dbArmoryItems.BonusVal3))
             {
                 bonus = new ArmoryItemRWBonus
                 {
@@ -197,14 +188,12 @@ public class ArmoryService
     {
 
         Database.Entities.ArmoryItemRWBonus? dbBonus = 
-            _database.ArmoryItemRWBonus.Where(b => b.BonusId == id && b.Value == null).FirstOrDefault();
+            _database.ArmoryItemRWBonus.Where(b => b.BonusId == id && b.Value == value).FirstOrDefault();
         TornBot.Entities.ItemRankedWarBonus bonus = new ItemRankedWarBonus();
 
         if (dbBonus == null)
         {
-            dbBonus = _database.ArmoryItemRWBonus.FirstOrDefault(b =>
-                b.BonusId == id && b.Value == value);
-            bonus.Description = dbBonus.Description;
+            bonus.Description = "Unknown RW Bonus. Please report this to the faction leaders";
         }
         else
         {
