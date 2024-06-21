@@ -22,6 +22,7 @@ using DSharpPlus.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
+using TornBot.Exceptions;
 using TornBot.Services.Cron.Infrastructure;
 using TornBot.Services.Discord.Services;
 using TornBot.Services.TornApi.Services;
@@ -63,16 +64,19 @@ namespace TornBot.Features.InactivePlayerMonitor.Cron
 
         public Task Execute(IJobExecutionContext context)
         {
-            //_logger.LogInformation("Stock update");
             UInt32 factionID = 0;
-            Services.TornApi.Entities.Faction Faction = tornApiService.GetFaction(factionID);
-
-            if (Faction == null)
+            
+            Services.TornApi.Entities.Faction Faction;
+            try
             {
-                _logger.LogInformation("Stocks update failed due to API error");
-                return null;
+                Faction = tornApiService.GetFaction(factionID);
             }
-
+            catch (ApiCallFailureException e)
+            {
+                _logger.LogInformation("Inactive Player update failed due to API error");
+                return Task.CompletedTask;
+            }
+            
             long currentTimestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
 
 
