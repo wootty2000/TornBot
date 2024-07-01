@@ -17,17 +17,14 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-namespace TornBot.Entities
+using TornBot.Services.Factions.Database.Entities;
+
+namespace TornBot.Services.Factions.Database.Dao;
+
+public interface IFactionDao
 {
-    public class TornFaction
-    {
-        public UInt32 Id { get; set; } = 0;
-
-        public string Name { get; set; } = "";
-        public string Tag { get; set; } = "";
-
-        public string Tag_image { get; set; } = "";
-
-        public List<TornPlayer> Members { get; set; } = new List<TornPlayer>();
-    }
+    public TornFactions? GetFactionById(UInt32 id);
+    public string GetFactionNameById(UInt32 id);
+    public List<TornFactions> GetFactionsForMonitoring();
+    public void AddOrUpdateTornFaction(TornBot.Entities.TornFaction faction);
 }

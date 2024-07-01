@@ -96,7 +96,7 @@ namespace TornBot.Services.TornStatsApi.Services
                     dbApiKeys.TornApiKey = "";
                 }
 
-                dbApiKeys.FactionId = tornPlayer.Faction.Id;
+                dbApiKeys.FactionId = tornPlayer.FactionId;
 
                 dbApiKeys.TornStatsApiKey = apiKey;
                 dbApiKeys.TornStatsApiAddedTimestamp = DateTime.UtcNow;

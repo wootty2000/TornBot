@@ -166,7 +166,7 @@ public class TornApiService
             //add api key with info to database
             UInt32 homeFactionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
 
-            KeyAccessLevel keyAccessLevel = CalculateKeyAccessLevel(apiKeyInfo, tornPlayer.Faction.Id, homeFactionId);
+            KeyAccessLevel keyAccessLevel = CalculateKeyAccessLevel(apiKeyInfo, tornPlayer.FactionId, homeFactionId);
             
             TornBot.Services.Database.Entities.ApiKeys? dbApiKeys = database.ApiKeys.Where(s => s.PlayerId == tornPlayer.Id).FirstOrDefault();
             
@@ -181,7 +181,7 @@ public class TornApiService
                 dbApiKeys.TornStatsApiKey = "";
             }
             
-            dbApiKeys.FactionId = tornPlayer.Faction.Id;
+            dbApiKeys.FactionId = tornPlayer.FactionId;
 
             dbApiKeys.TornApiKey = apiKey;
             dbApiKeys.TornAccessLevel = (byte)keyAccessLevel;
@@ -391,7 +391,7 @@ public class TornApiService
                 //TODO - Log that something went wrong
                 return false;
             }
-            keyFactionId = tornPlayer.Faction.Id;
+            keyFactionId = tornPlayer.FactionId;
         }
         else
             keyFactionId = dbApiKeys.First().FactionId;
@@ -633,9 +633,9 @@ public class TornApiService
     /// Will use the next available API key from the key store
     /// </summary>
     /// <param name="id">Torn Faction id</param>
-    /// <returns>TornApi.Entities.Faction object of the faction</returns>
+    /// <returns>TornBot.Entities.TornFaction object of the faction</returns>
     /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
-    public TornApi.Entities.Faction GetFaction(UInt32 id)
+    public TornBot.Entities.TornFaction GetFaction(UInt32 id)
     {
         //Loop until we get a valid response or run out of API keys or a other API call failure
         while (true)
@@ -681,9 +681,9 @@ public class TornApiService
     /// </summary>
     /// <param name="id">Torn Player id</param>
     /// <param name="apiKey">Api Key to use</param>
-    /// <returns>TornApi.Entities.Faction object of the faction</returns>
+    /// <returns>TornBot.Entities.TornFaction object of the faction</returns>
     /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
-    public TornApi.Entities.Faction GetFaction(UInt32 id, string key)
+    public TornBot.Entities.TornFaction GetFaction(UInt32 id, string key)
     {
         string url = String.Format("faction/{0}?selections=&key={1}", id.ToString(), key);
 
@@ -692,9 +692,10 @@ public class TornApiService
             string apiResponse = MakeApiRequest(url);
 
             TornApi.Entities.Faction faction = JsonSerializer.Deserialize<TornApi.Entities.Faction>(apiResponse);
-            return faction;
+            
+            return faction.ToTornFaction();
         }
-        catch (ApiCallFailureException)
+        catch (ApiCallFailureException e)
         {
             throw;
         }

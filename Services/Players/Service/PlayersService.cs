@@ -23,6 +23,8 @@ using TornBot.Entities;
 using TornBot.Services.Database;
 using TornBot.Exceptions;
 using TornBot.Services.Armory.Service;
+using TornBot.Services.Players.Database.Dao;
+using TornBot.Services.Players.Database.Entities;
 using TornBot.Services.TornApi.Services;
 using TornBot.Services.TornStatsApi.Services;
 
@@ -32,19 +34,21 @@ namespace TornBot.Services.Players.Service
     {
         private const int MaxStatsCacheAge = 14;
         private const int MaxTornPlayerCacheAge = 7;
-
+        
         private readonly IConfigurationRoot _config;
         private DatabaseContext _database;
         private TornApiService _torn;
         private TornStatsApiService _tornStats;
         private readonly ArmoryService _armoryService;
+        private readonly IPlayerStatusDao _playerStatusDao;
         
         public PlayersService(
             DatabaseContext database,
             TornApiService torn,
             TornStatsApiService tornStats,
             IConfigurationRoot config,
-            ArmoryService armoryService
+            ArmoryService armoryService,
+            IPlayerStatusDao playerStatusDao
         ) 
         {
             _database = database;
@@ -52,6 +56,7 @@ namespace TornBot.Services.Players.Service
             _tornStats = tornStats;
             _config = config;
             _armoryService = armoryService;
+            _playerStatusDao = playerStatusDao;
         }
         
         /// <summary>
@@ -67,7 +72,7 @@ namespace TornBot.Services.Players.Service
             Entities.TornPlayer tornPlayer;
 
             // Lets try and get a record from the database. If there is no record, we get given a null
-            Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.FirstOrDefault(s => s.Id == id);
+            TornBot.Services.Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.FirstOrDefault(s => s.Id == id);
 
             // Check what we got from the database
             if (dbPlayer == null)
@@ -145,7 +150,7 @@ namespace TornBot.Services.Players.Service
                         if (tornPlayer.Name == name)
                         {
                             //The players has not changed their name. We now have a valid player Id
-                            _database.TornPlayers.Update(new Database.Entities.TornPlayer(tornPlayer));
+                            _database.TornPlayers.Update(new TornBot.Services.Database.Entities.TornPlayer(tornPlayer));
                             _database.SaveChanges();
                             return tornPlayer;
                         }
@@ -192,7 +197,7 @@ namespace TornBot.Services.Players.Service
 
                     tornPlayer = _torn.GetPlayer(id);
 
-                    _database.TornPlayers.Add(new Database.Entities.TornPlayer(tornPlayer));
+                    _database.TornPlayers.Add(new TornBot.Services.Database.Entities.TornPlayer(tornPlayer));
                     _database.SaveChanges();
 
                     return tornPlayer;
@@ -314,13 +319,13 @@ namespace TornBot.Services.Players.Service
         /// <returns>void</returns>
         public void RecordPlayerLoadOut(UInt32 playerId, LoadOut loadOut)
         {
-            Database.Entities.LoadOuts? dbLoadOuts = _database.LoadOuts.FirstOrDefault(lo => lo.PlayerId == playerId);
+            TornBot.Services.Database.Entities.LoadOuts? dbLoadOuts = _database.LoadOuts.FirstOrDefault(lo => lo.PlayerId == playerId);
             
             bool newLoadOut = false;
             if (dbLoadOuts == null)
             {
                 newLoadOut = true;
-                dbLoadOuts = new Database.Entities.LoadOuts();
+                dbLoadOuts = new TornBot.Services.Database.Entities.LoadOuts();
                 dbLoadOuts.PlayerId = playerId;
             }
             
@@ -481,7 +486,7 @@ namespace TornBot.Services.Players.Service
         public TornBot.Entities.LoadOut GetPlayerLoadOut(UInt32 playerId)
         {
             TornBot.Entities.LoadOut loadOut = new LoadOut();
-            Database.Entities.LoadOuts? dbLoadOut = _database.LoadOuts.FirstOrDefault(lo => lo.PlayerId == playerId);
+            TornBot.Services.Database.Entities.LoadOuts? dbLoadOut = _database.LoadOuts.FirstOrDefault(lo => lo.PlayerId == playerId);
 
             if (dbLoadOut == null)
             {
@@ -536,6 +541,28 @@ namespace TornBot.Services.Players.Service
                 loadOut.BootsArmor = _armoryService.GetItem(dbLoadOut.BootsArmor.Value).ToArmoryItemDefensive();
 
             return loadOut;
+        }
+
+        /// <summary>
+        /// Record a player's status (okay, hosp, travelling etc) and their online status (offline, idle, online)
+        /// </summary>
+        /// <param name="tornPlayer">TornPlayer object of the player to record</param>
+        /// <returns>void</returns>
+        public void RecordPlayerStatus(TornBot.Entities.TornPlayer tornPlayer)
+        {
+            _playerStatusDao.RecordPlayerStatus(tornPlayer.Id, (byte)tornPlayer.Status, (byte)tornPlayer.OnlineStatus); 
+        }
+        
+        /// <summary>
+        /// Get a list of aailable dates for a player's recorded status
+        /// </summary>
+        /// <param name="playerId">Torn Player id</param>
+        /// <returns>List<DateTime></returns>
+        public List<DateTime> GetPlayerStatusDatesForPlayer(UInt32 playerId)
+        {
+            List<DateTime> dates = _playerStatusDao.GetPlayerStatusDatesForPlayer(playerId);
+
+            return dates;
         }
         
         public Task StartAsync(CancellationToken cancellationToken)

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using TornBot.Entities;
 
 namespace TornBot.Services.TornApi.Entities
 {
@@ -57,5 +58,25 @@ namespace TornBot.Services.TornApi.Entities
         [JsonPropertyName("members")]
         public Dictionary<UInt32, FactionMember> FactionMember { get; set; }
 
+        public TornBot.Entities.TornFaction ToTornFaction()
+        {
+            TornFaction faction = new TornFaction
+            {
+                Id = Id,
+                Name = Name,
+                Tag = Tag,
+                Tag_image = TagImage,
+            };
+
+            TornPlayer player;
+            foreach (var member in FactionMember)
+            {
+                player = member.Value.ToTornPlayer(member.Key);
+                player.FactionId = Id;
+                faction.Members.Add(player);
+            }
+
+            return faction;
+        }
     }
 }

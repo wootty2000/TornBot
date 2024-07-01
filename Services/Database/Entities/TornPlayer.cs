@@ -31,9 +31,8 @@ namespace TornBot.Services.Database.Entities
         public UInt32 Id { get; set; }
         public string Name { get; set; }
         public UInt16 Level { get; set; }
+        public UInt32 FactionId { get; set; }
         public DateTime LastUpdated { get; set; }
-        public string Faction_Name { get; set; }
-        public UInt32 Faction_ID { get; set; }
 
         public TornPlayer() { }
 
@@ -43,8 +42,7 @@ namespace TornBot.Services.Database.Entities
             Id = tornPlayer.Id;
             Name = tornPlayer.Name;
             Level = tornPlayer.Level;
-            Faction_Name = tornPlayer.Faction.Name;
-            Faction_ID = tornPlayer.Faction.Id;
+            FactionId = tornPlayer.FactionId;
             LastUpdated = DateTime.UtcNow;
         }
         
@@ -52,22 +50,19 @@ namespace TornBot.Services.Database.Entities
         {
             Name = tornPlayer.Name;
             Level = tornPlayer.Level;
-            Faction_Name = tornPlayer.Faction.Name;
-            Faction_ID = tornPlayer.Faction.Id;
+            FactionId = tornPlayer.FactionId;
             LastUpdated = DateTime.UtcNow;
         }
 
         public TornBot.Entities.TornPlayer ToTornPlayer()
         {
-            TornBot.Entities.TornPlayer tornPlayer = new TornBot.Entities.TornPlayer();
-            tornPlayer.Id = Id;
-            tornPlayer.Name = Name;
-            tornPlayer.Level = Level;
-            TornBot.Entities.TornFaction tornFaction = new TornBot.Entities.TornFaction();
-            tornFaction.Name = Faction_Name;
-            tornFaction.Id = Faction_ID;
-            tornPlayer.Faction = tornFaction;
-            return tornPlayer;
+            return new TornBot.Entities.TornPlayer
+            {
+                Id = Id,
+                Name = Name,
+                Level = Level,
+                FactionId = FactionId
+            };
         }
         
     }

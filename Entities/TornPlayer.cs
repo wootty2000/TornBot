@@ -17,29 +17,58 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+using TornBot.Services.Players.Service;
+
 namespace TornBot.Entities
 {
     public class TornPlayer
     {
+        public UInt32 Id { get; set; } = 0;
+
+        public string Name { get; set; } = "";
+
+        public UInt32 FactionId { get; set; } = 0;
+
+        public UInt16 Level { get; set; } = 0;
+
+        public UInt16 Revivable { get; set; } = 0;
+
+        public PlayerStatus Status { get; set; } = PlayerStatus.Unknown;
+        public PlayerOnlineStatus OnlineStatus { get; set; } = PlayerOnlineStatus.Unknown;
+        public DateTime LastAction { get; set; } = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        public long LastActionUnixTime => new DateTimeOffset(LastAction).ToUnixTimeSeconds();
+
+        public enum PlayerStatus
+        {
+            Unknown = 0,
+            Okay = 1,
+            Traveling = 2,
+            Abroad = 3,
+            Hospital = 4,
+            Jail = 5,
+            Federal = 6,
+            Fallen = 7
+        };
+
+        public enum PlayerOnlineStatus
+        {
+            Unknown = 0,
+            Offline = 1,
+            Idle = 2,
+            Online = 3
+        };
+
+        
         public TornPlayer()
         { }
 
-        public TornPlayer(UInt32 id, string name, TornFaction tornFaction, UInt16 lvl)
+        public TornPlayer(UInt32 id, string name, UInt16 lvl, UInt32 factionId)
         {
             this.Id = id;
             this.Name = name;
-            this.Faction = tornFaction;
             this.Level = lvl;
+            this.FactionId = factionId;
         }
 
-        public UInt32 Id { get; set; }
-
-        public string Name { get; set; }
-
-        public TornFaction Faction { get; set; }
-
-        public UInt16 Level { get; set; }
-
-        public UInt16 Revivable { get; set; }
     }
 }

@@ -18,11 +18,10 @@
 //
 
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
+using TornBot.Services.Database;
+using TornBot.Services.Players.Database;
+using TornBot.Services.Players.Database.Dao;
 using TornBot.Services.Players.Service;
 
 namespace TornBot.Services.Players
@@ -31,7 +30,14 @@ namespace TornBot.Services.Players
     {
         public IServiceCollection RegisterModule(IServiceCollection services)
         {
-            //services.AddSingleton<PlayersService>();
+            using (var serviceProvider = services.BuildServiceProvider())
+            {
+                IConfigurationRoot config = serviceProvider.GetRequiredService<IConfigurationRoot>();
+                DbContextFactory.ConfigureDbContext<PlayerStatusDbContext>(services, config);
+            }
+
+            services.AddScoped<IPlayerStatusDao, PlayerStatusDao>();
+            services.AddScoped<IPlayerActivityImageService, PlayerActivityImageServiceLandscape>();
             services.AddScoped<PlayersService>();
 
             return services;
