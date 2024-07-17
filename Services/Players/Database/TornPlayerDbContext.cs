@@ -15,14 +15,17 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-using TornBot.Entities;
+using Microsoft.EntityFrameworkCore;
 using TornBot.Services.Players.Database.Entities;
 
-namespace TornBot.Services.Players.Service;
+namespace TornBot.Services.Players.Database;
 
-public interface IPlayerActivityImageService
+public class TornPlayerDbContext : BaseDbContext
 {
-    public Stream GeneratePlayerActivityImage(PlayerStatus playerStatus);
+    public DbSet<TornPlayer> TornPlayers { get; set; }
 
-    public Stream GenerateFactionHeatmapImage(List<PlayerStatus> playerStatuses, TornFaction tornFaction, DateTime startDate);
+    public TornPlayerDbContext(DbContextOptions<TornPlayerDbContext> options)
+        : base(options)
+    {
+    }
 }

@@ -15,14 +15,11 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-using TornBot.Entities;
-using TornBot.Services.Players.Database.Entities;
+namespace TornBot.Services.Players.Database.Dao;
 
-namespace TornBot.Services.Players.Service;
-
-public interface IPlayerActivityImageService
+public interface ITornPlayerDao
 {
-    public Stream GeneratePlayerActivityImage(PlayerStatus playerStatus);
-
-    public Stream GenerateFactionHeatmapImage(List<PlayerStatus> playerStatuses, TornFaction tornFaction, DateTime startDate);
+    public TornBot.Entities.TornPlayer GetPlayer(UInt32 playerId);
+    public void SavePlayer(TornBot.Entities.TornPlayer tornPlayer);
+    public List<TornBot.Entities.TornPlayer> GetMembersInFaction(UInt32 factionId);
 }

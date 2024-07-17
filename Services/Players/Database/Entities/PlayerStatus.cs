@@ -31,7 +31,7 @@ public class PlayerStatus
     public UInt32 PlayerId { get; set; } = 0;
     
     [Required]
-    public DateTime WeekStarting { get; set; } = new DateTime();
+    public DateTime WeekStarting { get; set; } = DateTime.UnixEpoch;
 
     [Required]
     public string StatusLog { get; set; } = "";

@@ -21,6 +21,7 @@ using DSharpPlus.EventArgs;
 using DSharpPlus.SlashCommands;
 using TornBot.Services.Discord.Interfaces;
 using TornBot.Services.Players.Database.Dao;
+using TornBot.Services.Players.Database.Entities;
 using TornBot.Services.Players.Service;
 
 namespace TornBot.Features.FactionActivityMonitor.Discord;
@@ -197,14 +198,24 @@ public class PlayerActivity : ApplicationCommandModule, IDiscordEventHandlerModu
 
         try
         {
-            var playerStatus = _playerStatusDao.GetPlayerStatus(Convert.ToUInt32(playerId), DateTime.Parse($"{year}-{month}-{day}"));
-            Stream imageStream = _imageService.GenerateStatusImage(playerStatus);
+            var webhookBuilder = new DiscordInteractionResponseBuilder();
+            
+            PlayerStatus? playerStatus = _playerStatusDao.GetPlayerStatus(Convert.ToUInt32(playerId), DateTime.Parse($"{year}-{month}-{day}"));
+            if (playerStatus == null)
+            {
+                webhookBuilder
+                    .WithContent("No data found");
+            }
+            else
+            {
+                Stream imageStream = _imageService.GeneratePlayerActivityImage(playerStatus);
 
-            // Send the final response with the image
-            var webhookBuilder = new DiscordInteractionResponseBuilder()
-                .AddFile("player_activity.png", imageStream)
-                .WithContent("Player activity for the specified player:");
+                webhookBuilder
+                    .AddFile("player_activity.png", imageStream)
+                    .WithContent("Player activity for the specified player:");
 
+            }
+            
             await args.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, webhookBuilder);
         }
         catch (Exception ex)

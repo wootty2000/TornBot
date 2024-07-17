@@ -24,7 +24,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TornBot.Entities;
 
-namespace TornBot.Services.Database.Entities
+namespace TornBot.Services.Players.Database.Entities
 {
     public class TornPlayer
     {

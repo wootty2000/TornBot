@@ -35,9 +35,8 @@ public class PlayerStatusDao : IPlayerStatusDao
     }
 
     //
-    public void RecordPlayerStatus(UInt32 playerId, byte status, byte onlineStatus)
+    public void RecordPlayerStatus(UInt32 playerId, byte status, byte onlineStatus, DateTime now)
     {
-        var now = DateTime.UtcNow;
         // DayOfWeek 0 is Sunday. We want to start on Monday
         var weekStarting = now.Date.AddDays(-(int)now.DayOfWeek + (now.DayOfWeek == DayOfWeek.Sunday ? -6 : 1)); 
         
@@ -74,15 +73,15 @@ public class PlayerStatusDao : IPlayerStatusDao
     
     public List<DateTime> GetPlayerStatusDatesForPlayer(UInt32 playerId)
     {
-        List<DateTime> dates = _dbSet.Where(ps => ps.PlayerId == playerId).Select(ps => ps.WeekStarting).ToList();
+        // Have to use AsNoTracking because EF is not tracking the insert/update from above
+        List<DateTime> dates = _dbSet.AsNoTracking().Where(ps => ps.PlayerId == playerId).Select(ps => ps.WeekStarting).ToList();
 
         return dates;
     }
     
     public PlayerStatus? GetPlayerStatus(UInt32 playerId, DateTime weekStarting)
     {
-        return _dbSet
-            .FirstOrDefault(ps => ps.PlayerId == playerId && ps.WeekStarting == weekStarting);
+        // Have to use AsNoTracking because EF is not tracking the insert/update from above
+        return _dbSet.AsNoTracking().FirstOrDefault(ps => ps.PlayerId == playerId && ps.WeekStarting == weekStarting);
     }
-
 }

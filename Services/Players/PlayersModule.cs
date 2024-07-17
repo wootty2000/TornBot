@@ -34,9 +34,11 @@ namespace TornBot.Services.Players
             {
                 IConfigurationRoot config = serviceProvider.GetRequiredService<IConfigurationRoot>();
                 DbContextFactory.ConfigureDbContext<PlayerStatusDbContext>(services, config);
+                DbContextFactory.ConfigureDbContext<TornPlayerDbContext>(services, config);
             }
 
             services.AddScoped<IPlayerStatusDao, PlayerStatusDao>();
+            services.AddScoped<ITornPlayerDao, TornPlayerDao>();
             services.AddScoped<IPlayerActivityImageService, PlayerActivityImageServiceLandscape>();
             services.AddScoped<PlayersService>();
 

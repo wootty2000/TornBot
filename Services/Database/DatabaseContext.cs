@@ -23,6 +23,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TornBot.Services.Database.Entities;
+using TornBot.Services.Players.Database.Entities;
 
 namespace TornBot.Services.Database
 {

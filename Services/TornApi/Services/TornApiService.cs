@@ -35,6 +35,7 @@ public class TornApiService
     
     private readonly int _rateLimitPerMinutePerKey;
     private readonly TimeSpan _rateLimitWindow;
+    private readonly ConcurrentDictionary<string, object> _keyLocks = new ConcurrentDictionary<string, object>();
     private readonly ConcurrentDictionary<string, Queue<DateTime>> _keyCallTimestamps;
 
     private const byte AccessLevelPublic   = 0b00000001;
@@ -95,7 +96,7 @@ public class TornApiService
         _rateLimitWindow = TimeSpan.FromSeconds(60);
         _keyCallTimestamps = new ConcurrentDictionary<string, Queue<DateTime>>();
     }
-    
+
     /// <summary>
     /// Checks and applies rate limiting to the supplied Api Key 
     /// </summary>
@@ -103,31 +104,37 @@ public class TornApiService
     /// <returns>bool</returns>
     private bool CheckRateLimit(string apiKey)
     {
-        // Check if timestamps queue exists for the key
-        if (!_keyCallTimestamps.TryGetValue(apiKey, out var timestamps))
-        {
-            // Create a new queue for this key
-            timestamps = new Queue<DateTime>(10);
-            _keyCallTimestamps.TryAdd(apiKey, timestamps);
-        }
-        
-        // Remove timestamps older than 60 seconds
-        while (timestamps.Count > 0 && timestamps.Peek() < DateTime.UtcNow.Subtract(_rateLimitWindow))
-        {
-            timestamps.Dequeue();
-        }
+        // Get or create a lock object for this API key
+        var keyLock = _keyLocks.GetOrAdd(apiKey, new object());
 
-        // Check if we are over the rate limit
-        if (timestamps.Count >= _rateLimitPerMinutePerKey)
-            return false;
-        
-        // Enqueue current timestamp
-        timestamps.Enqueue(DateTime.UtcNow);
+        lock (keyLock)
+        {
+            // Check if timestamps queue exists for the key
+            if (!_keyCallTimestamps.TryGetValue(apiKey, out var timestamps))
+            {
+                // Create a new queue for this key
+                timestamps = new Queue<DateTime>(10);
+                _keyCallTimestamps.TryAdd(apiKey, timestamps);
+            }
 
-        // Must be good
-        return true;
+            // Remove timestamps older than 60 seconds
+            while (timestamps.Count > 0 && timestamps.Peek() < DateTime.UtcNow.Subtract(_rateLimitWindow))
+            {
+                timestamps.Dequeue();
+            }
+
+            // Check if we are over the rate limit
+            if (timestamps.Count >= _rateLimitPerMinutePerKey)
+                return false;
+
+            // Enqueue current timestamp
+            timestamps.Enqueue(DateTime.UtcNow);
+
+            // Must be good
+            return true;
+        }
     }
-    
+
     /// <summary>
     /// Adds the supplied Api key to the database
     /// 2 API calls are made to Torn.
@@ -147,7 +154,7 @@ public class TornApiService
             TornBot.Entities.KeyInfo apiKeyInfo = GetApiKeyInfo(apiKey);
             TornBot.Entities.TornPlayer tornPlayer = GetPlayer(0, apiKey);
 
-            TornBot.Services.Database.Entities.TornPlayer? dbTornPlayer = database.TornPlayers.FirstOrDefault(s => s.Id == tornPlayer.Id);
+            TornBot.Services.Players.Database.Entities.TornPlayer? dbTornPlayer = database.TornPlayers.FirstOrDefault(s => s.Id == tornPlayer.Id);
 
             if (dbTornPlayer != null)
             {
@@ -158,7 +165,7 @@ public class TornApiService
             }
             else
             {
-                database.TornPlayers.Add(new TornBot.Services.Database.Entities.TornPlayer(tornPlayer));
+                database.TornPlayers.Add(new TornBot.Services.Players.Database.Entities.TornPlayer(tornPlayer));
                 database.SaveChanges();
                 //TODO - log added new TornPlayer via AddApiKey
             }

@@ -21,7 +21,7 @@ namespace TornBot.Services.Players.Database.Dao;
 
 public interface IPlayerStatusDao
 {
-    public void RecordPlayerStatus(UInt32 playerId, byte status, byte onlineStatus);
+    public void RecordPlayerStatus(UInt32 playerId, byte status, byte onlineStatus, DateTime now);
     public List<DateTime> GetPlayerStatusDatesForPlayer(UInt32 playerId);
     public PlayerStatus? GetPlayerStatus(UInt32 playerId, DateTime weekStarting);
 }

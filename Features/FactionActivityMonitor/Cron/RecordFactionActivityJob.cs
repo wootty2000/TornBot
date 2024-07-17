@@ -19,7 +19,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
-using Quartz.Xml.JobSchedulingData20;
 using TornBot.Entities;
 using TornBot.Exceptions;
 using TornBot.Services.Cron.Infrastructure;
@@ -31,9 +30,9 @@ namespace TornBot.Features.FactionActivityMonitor.Cron;
 
 public class RecordFactionActivityJob : WorkerJob
 {
+    private readonly int _maxNumberThreads = 10;
     private static string _cronExpression = "0 */5 * * * ? *";
 
-    private readonly IConfigurationRoot _config;
     private readonly ILogger<RecordFactionActivityJob> _logger;
     private readonly TornApiService _tornApiService;
     private readonly PlayersService _playersService;
@@ -54,41 +53,66 @@ public class RecordFactionActivityJob : WorkerJob
     }
     
     public RecordFactionActivityJob(
-        IConfigurationRoot config,
         ILogger<RecordFactionActivityJob> logger,
         TornApiService tornApiService,
         PlayersService playersService,
         FactionsService factionsService
     )
     {
-        _config = config;
         _logger = logger;
         _tornApiService = tornApiService;
         _playersService = playersService;
         _factionsService = factionsService;
     }
 
-    public Task Execute(IJobExecutionContext context)
+    public async Task Execute(IJobExecutionContext context)
     {
         try
         {
-            List<TornFaction> factionsList = _factionsService.GetFactionsForMonitoring();
+            List<TornFaction> dbFactionsList = _factionsService.GetFactionsForMonitoring();
+            List<TornFaction> factionsList = new List<TornFaction>();
+            DateTime now = DateTime.UtcNow;
+            
+            var semaphore = new SemaphoreSlim(_maxNumberThreads);
 
-            foreach (var factionList in factionsList)
+            var factionTasks = dbFactionsList.Select(async dbFaction =>
             {
                 TornBot.Entities.TornFaction factions = _tornApiService.GetFaction(factionList.Id);
 
-                foreach (var member in factions.Members)
+                await semaphore.WaitAsync();
+                try
                 {
-                    _playersService.RecordPlayerStatus(member);
-                    // TODO Update DB TornPlayers member name
+                    await Task.Run(() =>
+                    {
+                        TornBot.Entities.TornFaction faction = _tornApiService.GetFaction(dbFaction.Id);
+                        factionsList.Add(faction);
+                    });
                 }
             }
+                finally
+                {
+                    semaphore.Release();
+                }
+            }).ToList();
+            await Task.WhenAll(factionTasks);
+
+            foreach (var faction in factionsList)
+            {
+                //TODO Update db with faction
+                foreach (var member in faction.Members)
+                {
+                    _playersService.RecordPlayerStatus(member, now);
+                    _playersService.SavePlayer(member);
+                }
+            }
+            
+            //_playersService.ResetPlayerStatusDaoCache();
         }
         catch (ApiCallFailureException e)
         {
-            _logger.LogError(e, "Failed to record faction member activity");
+            _logger.LogError(e, "Failed to record faction activity");
         }
+    }
 
 
         return Task.CompletedTask;

@@ -267,7 +267,7 @@ public class FactionsService : IHostedService
         }
 
         return tornFactions;
-    }   
+    }
     
     public UInt32 GetHomeFactionId()
     {
