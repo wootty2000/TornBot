@@ -39,7 +39,7 @@ namespace TornBot.Services.Players
 
             services.AddScoped<IPlayerStatusDao, PlayerStatusDao>();
             services.AddScoped<ITornPlayerDao, TornPlayerDao>();
-            services.AddScoped<IPlayerActivityImageService, PlayerActivityImageServiceLandscape>();
+            services.AddScoped<IPlayerActivityImageService, PlayerActivityImageService>();
             services.AddScoped<PlayersService>();
 
             return services;

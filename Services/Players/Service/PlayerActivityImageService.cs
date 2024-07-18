@@ -15,14 +15,12 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-using Newtonsoft.Json.Linq;
 using SkiaSharp;
 using TornBot.Entities;
-using TornBot.Services.Players.Database.Entities;
 
 namespace TornBot.Services.Players.Service;
 
-public class PlayerActivityImageServiceLandscape : IPlayerActivityImageService
+public class PlayerActivityImageService : IPlayerActivityImageService
 {
     private static readonly int SlotWidth = 5;
     private static readonly int SlotHeight = 20;
