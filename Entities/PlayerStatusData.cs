@@ -15,14 +15,29 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-using TornBot.Entities;
-using TornBot.Services.Players.Database.Entities;
+namespace TornBot.Entities;
 
-namespace TornBot.Services.Players.Service;
-
-public interface IPlayerActivityImageService
+public class PlayerStatusData
 {
-    public Stream GeneratePlayerActivityImage(PlayerStatusData playerStatus);
+    public UInt32 Id { get; set; } = 0;
+    public DateTime WeekStarting { get; set; } = DateTime.UnixEpoch;
+    
+    public Dictionary<string, Dictionary<string, PlayerStatusDataLogEntry>> StatusData { get; set; } =
+        new Dictionary<string, Dictionary<string, PlayerStatusDataLogEntry>>();
+}
 
-    public Stream GenerateFactionHeatmapImage(List<PlayerStatusData> playerStatuses, TornFaction tornFaction, DateTime startDate);
+public class PlayerStatusDataLogEntry
+{
+    public byte PlayerStatus { get; set; } = 0;
+    public byte OnlineStatus { get; set; } = 0;
+
+    public PlayerStatusDataLogEntry()
+    {
+    }
+
+    public PlayerStatusDataLogEntry(byte playerStatus, byte onlineStatus)
+    {
+        PlayerStatus = playerStatus;
+        OnlineStatus = onlineStatus;
+    }
 }

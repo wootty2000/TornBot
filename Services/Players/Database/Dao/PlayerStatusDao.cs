@@ -79,7 +79,7 @@ public class PlayerStatusDao : IPlayerStatusDao
         return dates;
     }
     
-    public PlayerStatus? GetPlayerStatus(UInt32 playerId, DateTime weekStarting)
+    public PlayerStatus? GetPlayerStatusData(UInt32 playerId, DateTime weekStarting)
     {
         // Have to use AsNoTracking because EF is not tracking the insert/update from above
         return _dbSet.AsNoTracking().FirstOrDefault(ps => ps.PlayerId == playerId && ps.WeekStarting == weekStarting);

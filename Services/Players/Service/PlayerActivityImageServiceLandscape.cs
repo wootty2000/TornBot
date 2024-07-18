@@ -31,7 +31,7 @@ public class PlayerActivityImageServiceLandscape : IPlayerActivityImageService
     private static readonly int BorderWidth = 20; // Width of the outer border
     private static int InfoHeight = 50; // Height for player info and week dates
 
-    public Stream GeneratePlayerActivityImage(PlayerStatus playerStatus)
+    public Stream GeneratePlayerActivityImage(PlayerStatusData playerStatus)
     {
         InfoHeight = 50;
         
@@ -60,7 +60,7 @@ public class PlayerActivityImageServiceLandscape : IPlayerActivityImageService
         return memoryStream;
     }
 
-    public Stream GenerateFactionHeatmapImage(List<PlayerStatus> playerStatuses, TornFaction faction, DateTime startDate)
+    public Stream GenerateFactionHeatmapImage(List<PlayerStatusData> playerStatuses, TornFaction faction, DateTime startDate)
     {
         InfoHeight = 70;
         
@@ -98,7 +98,7 @@ public class PlayerActivityImageServiceLandscape : IPlayerActivityImageService
         return memoryStream;
     }
     
-    private void DrawPlayerInfo(SKCanvas canvas, PlayerStatus playerStatus)
+    private void DrawPlayerInfo(SKCanvas canvas, PlayerStatusData playerStatus)
     {
         var paint = new SKPaint
         {
@@ -111,7 +111,7 @@ public class PlayerActivityImageServiceLandscape : IPlayerActivityImageService
         };
 
         // Draw Player Id
-        string playerInfo = $"Player ID: {playerStatus.PlayerId}";
+        string playerInfo = $"Player ID: {playerStatus.Id}";
         canvas.DrawText(playerInfo, BorderWidth, BorderWidth, paint);
 
         // Draw Week Dates
@@ -218,21 +218,21 @@ public class PlayerActivityImageServiceLandscape : IPlayerActivityImageService
         }
     }
     
-    private void DrawPlayerStatusCells(SKCanvas canvas, PlayerStatus playerStatus, int rows)
+    private void DrawPlayerStatusCells(SKCanvas canvas, PlayerStatusData playerStatus, int rows)
     {
-        var statusData = JObject.Parse(playerStatus.StatusLog);
+        var statusData = playerStatus.StatusData; 
 
         for (int day = 0; day < rows; day++)
         {
             string dayName = Enum.GetName(typeof(DayOfWeek), (DayOfWeek)(((int)DayOfWeek.Monday + day) % 7)).ToLower();
             if (statusData.TryGetValue(dayName, out var dayData))
             {
-                var daySlots = (JObject)dayData;
-
-                foreach (var slot in daySlots.Properties())
+                var daySlots = dayData;
+                    
+                foreach (var slot in daySlots)
                 {
-                    int timeSlotIndex = GetTimeSlotIndex(slot.Name);
-                    SKColor color = GetColorForStatus(slot.Value);
+                    int timeSlotIndex = GetTimeSlotIndex(slot.Key);
+                    SKColor color = GetColorForStatus(slot.Value.OnlineStatus);
                     SKRect cellRect = new SKRect(
                         HeaderWidth + BorderWidth + timeSlotIndex * SlotWidth, 
                         HeaderHeight + BorderWidth + InfoHeight + day * SlotHeight, 
@@ -249,7 +249,7 @@ public class PlayerActivityImageServiceLandscape : IPlayerActivityImageService
         }
     }
 
-    private Dictionary<DateTime, int> GenerateHeatMapData(List<PlayerStatus> statuses, DateTime startTime, int rows)
+    private Dictionary<DateTime, int> GenerateHeatMapData(List<PlayerStatusData> statuses, DateTime startTime, int rows)
     {
         var intervals = new Dictionary<DateTime, int>();
 
@@ -260,24 +260,24 @@ public class PlayerActivityImageServiceLandscape : IPlayerActivityImageService
 
         foreach (var status in statuses)
         {
-            var statusData = JObject.Parse(status.StatusLog);
+            var statusData = status.StatusData; 
 
             for (int day = 0; day < rows; day++)
             {
                 string dayName = Enum.GetName(typeof(DayOfWeek), (DayOfWeek)(((int)DayOfWeek.Monday + day) % 7)).ToLower();
                 if (statusData.TryGetValue(dayName, out var dayData))
                 {
-                    var daySlots = (JObject)dayData;
+                    var daySlots = dayData;
                     
-                    foreach (var slot in daySlots.Properties())
+                    foreach (var slot in daySlots)
                     {
-                        string[] time = slot.Name.Split(':');
+                        string[] time = slot.Key.Split(':');
                         int hours = int.Parse(time[0]);
                         int minutes = int.Parse(time[1]);
                         
                         DateTime interval = startTime.AddDays(day).AddHours(hours).AddMinutes((minutes / 5) * 5);
 
-                        if (slot.Value["OnlineStatus"].Value<char>() == (char)TornBot.Entities.TornPlayer.PlayerOnlineStatus.Online)
+                        if (slot.Value.OnlineStatus == (byte)TornBot.Entities.TornPlayer.PlayerOnlineStatus.Online)
                         {
                             if (intervals[interval] == -1)
                                 intervals[interval] = 1;
@@ -348,11 +348,9 @@ public class PlayerActivityImageServiceLandscape : IPlayerActivityImageService
         return (timeOfDay.Hours * 12) + (timeOfDay.Minutes / 5);
     }
 
-    private SKColor GetColorForStatus(JToken status)
+    private SKColor GetColorForStatus(byte status)
     {
-        int onlineStatus = status["OnlineStatus"].Value<int>();
-
-        return onlineStatus switch
+        return status switch
         {
             1 => SKColors.Tomato,
             2 => SKColors.Orange,

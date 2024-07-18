@@ -575,9 +575,15 @@ namespace TornBot.Services.Players.Service
             return dates;
         }
 
-        public PlayerStatusData GetPlayerStatus(UInt32 playerId, DateTime startDate)
+        /// <summary>
+        /// Get a available dates for a player's recorded status for a specific week
+        /// </summary>
+        /// <param name="playerId">Torn Player id</param>
+        /// <param name="startDate">Week starting from date</param>
+        /// <returns>List<DateTime></returns>
+        public PlayerStatusData GetPlayerStatusData(UInt32 playerId, DateTime startDate)
         {
-            PlayerStatus? dbPlayerStatus = _playerStatusDao.GetPlayerStatus(playerId, startDate);
+            PlayerStatus? dbPlayerStatus = _playerStatusDao.GetPlayerStatusData(playerId, startDate);
             
             if (dbPlayerStatus != null)
                 return dbPlayerStatus.ToPlayerStatusData();

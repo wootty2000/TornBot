@@ -18,6 +18,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
+using TornBot.Entities;
 
 namespace TornBot.Services.Players.Database.Entities;
 
@@ -40,5 +41,32 @@ public class PlayerStatus
     public Dictionary<string, Dictionary<string, PlayerStatusLogEntry>>? GetStatusLogEntries()
     {
         return JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, PlayerStatusLogEntry>>>(StatusLog);
+    }
+
+    public TornBot.Entities.PlayerStatusData ToPlayerStatusData()
+    {
+        PlayerStatusData playerStatusData = new PlayerStatusData
+        {
+            Id = PlayerId,
+            WeekStarting = WeekStarting
+        };
+
+        var data = GetStatusLogEntries();
+
+        foreach (var day in data)
+        {
+            var entries = new Dictionary<string, PlayerStatusDataLogEntry>();
+
+            foreach (var time in day.Value)
+            {
+                entries.Add(
+                    time.Key,
+                    new PlayerStatusDataLogEntry((byte)time.Value.PlayerStatus, (byte)time.Value.OnlineStatus));
+            }
+            
+            playerStatusData.StatusData.Add(day.Key, entries);
+        }
+
+        return playerStatusData;
     }
 }

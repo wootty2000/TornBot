@@ -256,12 +256,12 @@ public class FactionActivity : ApplicationCommandModule, IDiscordEventHandlerMod
             
             List<TornPlayer> players = _playersService.GetPlayersInFaction(factionId);
 
-            List<PlayerStatus> statuses = new List<PlayerStatus>();
+            List<PlayerStatusData> statuses = new List<PlayerStatusData>();
             foreach (var player in players)
             {
-                PlayerStatus? status = _playerStatusDao.GetPlayerStatus(Convert.ToUInt32(player.Id), startDate);
+                PlayerStatusData status = _playersService.GetPlayerStatusData(Convert.ToUInt32(player.Id), startDate);
                 
-                if(status != null)
+                if(status.Id > 0)
                     statuses.Add(status);
             }
             

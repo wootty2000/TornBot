@@ -19,9 +19,9 @@ using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.SlashCommands;
+using TornBot.Entities;
 using TornBot.Services.Discord.Interfaces;
 using TornBot.Services.Players.Database.Dao;
-using TornBot.Services.Players.Database.Entities;
 using TornBot.Services.Players.Service;
 
 namespace TornBot.Features.FactionActivityMonitor.Discord;
@@ -200,8 +200,8 @@ public class PlayerActivity : ApplicationCommandModule, IDiscordEventHandlerModu
         {
             var webhookBuilder = new DiscordInteractionResponseBuilder();
             
-            PlayerStatus? playerStatus = _playerStatusDao.GetPlayerStatus(Convert.ToUInt32(playerId), DateTime.Parse($"{year}-{month}-{day}"));
-            if (playerStatus == null)
+            PlayerStatusData playerStatus = _playersService.GetPlayerStatusData(Convert.ToUInt32(playerId), DateTime.Parse($"{year}-{month}-{day}"));
+            if (playerStatus.Id == 0)
             {
                 webhookBuilder
                     .WithContent("No data found");

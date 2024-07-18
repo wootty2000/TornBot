@@ -77,7 +77,7 @@ public class RecordFactionActivityJob : WorkerJob
 
             var factionTasks = dbFactionsList.Select(async dbFaction =>
             {
-                TornBot.Entities.TornFaction factions = _tornApiService.GetFaction(factionList.Id);
+                
 
                 await semaphore.WaitAsync();
                 try
@@ -88,7 +88,6 @@ public class RecordFactionActivityJob : WorkerJob
                         factionsList.Add(faction);
                     });
                 }
-            }
                 finally
                 {
                     semaphore.Release();
@@ -112,9 +111,5 @@ public class RecordFactionActivityJob : WorkerJob
         {
             _logger.LogError(e, "Failed to record faction activity");
         }
-    }
-
-
-        return Task.CompletedTask;
     }
 }
