@@ -106,7 +106,17 @@ namespace TornBot.Features.InactivePlayerMonitor.Cron
                     }
                 }
             }
-            long channel_id = long.Parse(discordService.GetInactivePlayerChannelId());
+
+            long channel_id;
+            try
+            {
+                channel_id = long.Parse(discordService.GetInactivePlayerChannelId());
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Error parsing Discord InactivePlayerChannel id", e);
+                return Task.CompletedTask;
+            }
 
             var channel = discord.GetChannelAsync((ulong)channel_id);
             channel.ContinueWith((task) =>

@@ -38,9 +38,9 @@ public class PlayerStatus
     public string StatusLog { get; set; } = "";
 
     // Helper method to deserialize StatusLog into a usable structure
-    public Dictionary<string, Dictionary<string, PlayerStatusLogEntry>>? GetStatusLogEntries()
+    public Dictionary<string, Dictionary<string, int[]>>? GetStatusLogEntries()
     {
-        return JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, PlayerStatusLogEntry>>>(StatusLog);
+        return JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, int[]>>>(StatusLog);
     }
 
     public TornBot.Entities.PlayerStatusData ToPlayerStatusData()
@@ -61,7 +61,7 @@ public class PlayerStatus
             {
                 entries.Add(
                     time.Key,
-                    new PlayerStatusDataLogEntry((byte)time.Value.PlayerStatus, (byte)time.Value.OnlineStatus));
+                    new PlayerStatusDataLogEntry((byte)time.Value[0], (byte)time.Value[1]));
             }
             
             playerStatusData.StatusData.Add(day.Key, entries);

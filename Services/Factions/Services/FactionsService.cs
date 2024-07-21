@@ -68,6 +68,11 @@ public class FactionsService : IHostedService
         else
             return faction.ToTornFaction();
     }
+
+    public void UpdateFaction(TornFaction faction)
+    {
+        _factionDao.AddOrUpdateTornFaction(faction);
+    }
     
     /// <summary>
     /// Scans a faction, checking if any members are revivable

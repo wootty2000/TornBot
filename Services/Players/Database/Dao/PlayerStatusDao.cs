@@ -38,21 +38,17 @@ public class PlayerStatusDao : IPlayerStatusDao
     public void RecordPlayerStatus(UInt32 playerId, byte status, byte onlineStatus, DateTime now)
     {
         // DayOfWeek 0 is Sunday. We want to start on Monday
-        var weekStarting = now.Date.AddDays(-(int)now.DayOfWeek + (now.DayOfWeek == DayOfWeek.Sunday ? -6 : 1)); 
-        
+        var weekStarting = now.Date.AddDays(-(int)now.DayOfWeek + (now.DayOfWeek == DayOfWeek.Sunday ? -6 : 1));
+
         var day = now.ToString("dddd").ToLower();
         var time = now.ToString("HH:mm");
 
         var weekStartingStr = weekStarting.ToString("yyyy-MM-dd");
 
         var path = $"$.{day}.{time}";
+        
+        var statusJson = new JArray(status, onlineStatus).ToString(Newtonsoft.Json.Formatting.None);
 
-        var statusJson = new JObject
-        {
-            ["PlayerStatus"] = status,
-            ["OnlineStatus"] = onlineStatus
-        }.ToString(Newtonsoft.Json.Formatting.None);
-            
         var mergePatchJson = $"{{\"{day}\": {{\"{time}\": {statusJson}}}}}";
 
         var sql = @"

@@ -284,44 +284,4 @@ public class FactionActivity : ApplicationCommandModule, IDiscordEventHandlerMod
             //);
         }   
     }
-
-    
-    // private Dictionary<DateTime, int> GenerateHeatMapDataOld(List<PlayerStatus> statuses, DateTime startTime)
-    // {
-    //     var intervals = new Dictionary<DateTime, int>();
-    //
-    //     for (var time = startTime; time < startTime.AddDays(7); time = time.AddMinutes(5))
-    //     {
-    //         intervals[time] = 0;
-    //     }
-    //
-    //     foreach (var status in statuses)
-    //     {
-    //         DateTime timestamp = status.WeekStarting;
-    //         Dictionary<string, Dictionary<string, PlayerStatusLogEntry>> log = status.GetStatusLogEntries();
-    //         
-    //         bool isOnline = status.GetStatusLogEntries().
-    //             status["status"].ToString().Equals("online", StringComparison.OrdinalIgnoreCase);
-    //
-    //         if (isOnline)
-    //         {
-    //             var interval = new DateTime(
-    //                 timestamp.Year,
-    //                 timestamp.Month,
-    //                 timestamp.Day,
-    //                 timestamp.Hour,
-    //                 (timestamp.Minute / 5) * 5,
-    //                 0
-    //             );
-    //
-    //             if (intervals.ContainsKey(interval))
-    //             {
-    //                 intervals[interval]++;
-    //             }
-    //         }
-    //         
-    //     }
-    //
-    //     return intervals;
-    // }
 }

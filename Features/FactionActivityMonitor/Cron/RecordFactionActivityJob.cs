@@ -103,6 +103,7 @@ public class RecordFactionActivityJob : WorkerJob
                     _playersService.RecordPlayerStatus(member, now);
                     _playersService.SavePlayer(member);
                 }
+                _factionsService.UpdateFaction(faction);
             }
             
             //_playersService.ResetPlayerStatusDaoCache();
