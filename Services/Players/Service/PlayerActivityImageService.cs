@@ -330,7 +330,7 @@ public class PlayerActivityImageService : IPlayerActivityImageService
         if (onlineCount == -1)
             return SKColors.White;
         
-        if(onlineCount == 0)
+        if (onlineCount == 0)
             return new SKColor(0, 255, 0);
 
         float ratio = (float)onlineCount / maxOnlinePlayers;

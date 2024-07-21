@@ -93,16 +93,13 @@ namespace TornBot.Features.InactivePlayerMonitor.Cron
                     double timeDifference = currentTimestamp - lastActionTimestamp;
 
                     timeDifference = timeDifference / 86400;
-                    //Console.WriteLine(timeDifference);
+
                     if (timeDifference > 1)
                     {
                         string playerName = member.Name + " [" + member.Id + "]";
 
                         inactiveMembers.Add($"[{playerName}](https://www.torn.com/profiles.php?XID={member.Id})");
-                        //double time_h = timeDifference - (int)timeDifference;
-                        //time_h = time_h * 24;
                         inactiveTimes.Add((int)timeDifference + "d " + (int)((timeDifference - (int)timeDifference) * 24) + "h");
-                        //var playerLink = $"[{playerName}](https://www.torn.com/loader.php?sid=attack&user2ID={playerID})";
                     }
                 }
             }

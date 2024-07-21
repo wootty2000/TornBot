@@ -48,10 +48,11 @@ public class PlayerActivity : ApplicationCommandModule, IDiscordEventHandlerModu
         client.ComponentInteractionCreated += ComponentEventHandler;
     }
 
-    [SlashCommand("activity", "Gets the activity of a player")]
+    [SlashCommand("PlayerActivity", "Gets the activity of a player")]
     public async Task GetPlayerActivity(
         InteractionContext ctx,
-        [Option("PlayerId", "Player Id")] long id)
+        [Option("PlayerId", "Player Id")] long id
+    )
     {
         await ctx.DeferAsync();
 
@@ -224,7 +225,7 @@ public class PlayerActivity : ApplicationCommandModule, IDiscordEventHandlerModu
             Console.WriteLine($"Error processing slash command: {ex.Message}");
             await args.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
                 new DiscordInteractionResponseBuilder()
-                    .WithContent("An error occurred while processing the command.")
+                    .WithContent("Error getting data or building player activity image")
             );
         }   
     }

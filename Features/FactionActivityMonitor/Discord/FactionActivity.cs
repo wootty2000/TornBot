@@ -15,18 +15,14 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-using System.ComponentModel.Design;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.SlashCommands;
-using Newtonsoft.Json.Linq;
-using Org.BouncyCastle.Utilities;
 using TornBot.Entities;
 using TornBot.Services.Discord.Interfaces;
 using TornBot.Services.Factions.Services;
 using TornBot.Services.Players.Database.Dao;
-using TornBot.Services.Players.Database.Entities;
 using TornBot.Services.Players.Service;
 using TornPlayer = TornBot.Entities.TornPlayer;
 
@@ -40,7 +36,6 @@ public class FactionActivity : ApplicationCommandModule, IDiscordEventHandlerMod
     private IPlayerActivityImageService _imageService;
     
     public FactionActivity(
-        
         PlayersService playersService, 
         FactionsService factionsService,
         IPlayerStatusDao playerStatusDao,
@@ -87,7 +82,8 @@ public class FactionActivity : ApplicationCommandModule, IDiscordEventHandlerMod
     [SlashCommand("FactionActivity", "Gets the faction heatmap")]
     public async Task GetFactionActivity(
         InteractionContext ctx,
-        [Option("FactionId", "Faction Id")] long id)
+        [Option("FactionId", "Faction Id")] long id
+    )
     {
         await ctx.DeferAsync();
 
@@ -278,10 +274,10 @@ public class FactionActivity : ApplicationCommandModule, IDiscordEventHandlerMod
         {
             // Handle any exceptions or log errors
             Console.WriteLine($"Error processing slash command: {ex.Message}");
-            //await args.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource,
-            //    new DiscordInteractionResponseBuilder()
-            //        .WithContent("An error occurred while processing the command.")
-            //);
+            await args.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage,
+                new DiscordInteractionResponseBuilder()
+                    .WithContent("Error getting data or building faction activity image")
+            );
         }   
     }
 }

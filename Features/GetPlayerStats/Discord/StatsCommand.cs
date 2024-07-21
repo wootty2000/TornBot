@@ -33,7 +33,8 @@ namespace TornBot.Features.GetPlayerStats.Discord
 
         public StatsCommand(
             PlayersService players,
-            FactionsService factions)
+            FactionsService factions
+        )
         {
             _players = players;
             _faction = factions;
@@ -115,9 +116,11 @@ namespace TornBot.Features.GetPlayerStats.Discord
 
             string factionString = "";
             if (player.FactionId > 0)
-                factionString = String.Format("\nFaction: [{0}](https://www.torn.com/profiles.php?XID={1})",
+                factionString = String.Format(
+                    "\nFaction: [{0}](https://www.torn.com/profiles.php?XID={1})",
                     _faction.GetFactionNameById(player.FactionId),
-                    player.FactionId);
+                    player.FactionId
+                );
 
             //Build a response for the user
             DiscordEmbedBuilder embed = new DiscordEmbedBuilder();
