@@ -21,6 +21,7 @@ using System.Globalization;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 using TornBot.Exceptions;
+using TornBot.Services.Factions.Services;
 using TornBot.Services.Players.Service;
 
 namespace TornBot.Features.GetPlayerStats.Discord
@@ -28,11 +29,15 @@ namespace TornBot.Features.GetPlayerStats.Discord
     public class StatsCommand : ApplicationCommandModule
     {
         PlayersService _players;
+        FactionsService _faction;
 
         public StatsCommand(
-            PlayersService players)
+            PlayersService players,
+            FactionsService factions
+        )
         {
             _players = players;
+            _faction = factions;
         }
 
         [SlashCommand("Stats", "Gets the stats of a player")]
@@ -108,11 +113,19 @@ namespace TornBot.Features.GetPlayerStats.Discord
                 await ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(message));
                 return;
             }
-            
+
+            string factionString = "";
+            if (player.FactionId > 0)
+                factionString = String.Format(
+                    "\nFaction: [{0}](https://www.torn.com/profiles.php?XID={1})",
+                    _faction.GetFactionNameById(player.FactionId),
+                    player.FactionId
+                );
+
             //Build a response for the user
             DiscordEmbedBuilder embed = new DiscordEmbedBuilder();
             embed.Title = String.Format("{0} [{1}]", player.Name, player.Id);
-            embed.Description = "Lvl: " + player.Level + "\n" + "Faction: " + player.Faction.Name;
+            embed.Description = "Lvl: " + player.Level + factionString;
 
             embed.AddField("Battle Stats:",
                 "Strength: " + battleStats.Strength.ToString("N0", CultureInfo.InvariantCulture) + "\n" +

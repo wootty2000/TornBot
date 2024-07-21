@@ -20,6 +20,7 @@
 
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
+using TornBot.Entities;
 using TornBot.Services.Factions.Services;
 
 namespace TornBot.Features.ReviveMonitor.Discord
@@ -42,6 +43,7 @@ namespace TornBot.Features.ReviveMonitor.Discord
 
             //return list of players that can be revived
             //TODO Wrap in Try/catch block as GetReviveStatus can throw an exception
+            //Torn API Error 6 is Wrong Id. this needs checking
             List<Entities.TornPlayer> tornPlayerList = _factionsService.GetReviveStatus((UInt32)id, out bool usedInsideKey, ref ctx);
 
             if (tornPlayerList.Count == 0)
@@ -52,9 +54,10 @@ namespace TornBot.Features.ReviveMonitor.Discord
 
             string allRevivablePlayers = string.Join("\n", tornPlayerList.Select(tornPlayer => $"[{tornPlayer.Name}](https://www.torn.com/profiles.php?XID={tornPlayer.Id})"));
 
-            string factionName = tornPlayerList.FirstOrDefault().Faction.Name;
-            UInt32 factionID = tornPlayerList.FirstOrDefault().Faction.Id;
-            string faction_tag = tornPlayerList.FirstOrDefault().Faction.Tag_image;
+            TornFaction faction = _factionsService.GetFaction(tornPlayerList.First().FactionId);
+            string factionName = faction.Name;
+            UInt32 factionID = faction.Id;
+            string faction_tag = faction.Tag_image;
             
             string embedTitle = "Revivable players" + (usedInsideKey ? "\nWARNING - Inside key user. Expect false positives:" : ":");
 

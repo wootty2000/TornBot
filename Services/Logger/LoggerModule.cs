@@ -60,11 +60,11 @@ public class LoggerModule
         };
 
         config.AddTarget(databaseTarget);
-        config.AddTarget(discordTarget);
+        //config.AddTarget(discordTarget);
 
         config.AddRule(LogLevel.Warn, LogLevel.Fatal, databaseTarget);
         config.AddRule(LogLevel.Info, LogLevel.Fatal, inMemoryTarget);
-        config.AddRule(LogLevel.Info, LogLevel.Fatal, discordTarget);
+        //config.AddRule(LogLevel.Info, LogLevel.Fatal, discordTarget);
         
         LogManager.Configuration = config;
         

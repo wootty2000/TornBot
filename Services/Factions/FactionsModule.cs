@@ -17,7 +17,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TornBot.Services.Database;
+using TornBot.Services.Factions.Database;
+using TornBot.Services.Factions.Database.Dao;
 using TornBot.Services.Factions.Services;
 
 namespace TornBot.Services.Factions
@@ -26,6 +30,13 @@ namespace TornBot.Services.Factions
     {
         public IServiceCollection RegisterModule(IServiceCollection services)
         {
+            using (var serviceProvider = services.BuildServiceProvider())
+            {
+                IConfigurationRoot config = serviceProvider.GetRequiredService<IConfigurationRoot>();
+                DbContextFactory.ConfigureDbContext<FactionsDbContext>(services, config);
+            }
+            
+            services.AddScoped<IFactionDao, FactionDao>();
             services.AddScoped<FactionsService>();
 
             return services;

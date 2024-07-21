@@ -22,6 +22,7 @@ using DSharpPlus.Entities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
+using TornBot.Entities;
 using TornBot.Exceptions;
 using TornBot.Services.Cron.Infrastructure;
 using TornBot.Services.Discord.Services;
@@ -66,10 +67,10 @@ namespace TornBot.Features.InactivePlayerMonitor.Cron
         {
             UInt32 factionID = 0;
             
-            Services.TornApi.Entities.Faction Faction;
+            TornFaction faction;
             try
             {
-                Faction = tornApiService.GetFaction(factionID);
+                faction = tornApiService.GetFaction(factionID);
             }
             catch (ApiCallFailureException e)
             {
@@ -78,35 +79,41 @@ namespace TornBot.Features.InactivePlayerMonitor.Cron
             }
             
             long currentTimestamp = DateTimeOffset.Now.ToUnixTimeSeconds();
-
-
+            
             var inactiveMembers = new List<string>();
             var inactiveTimes = new List<string>();
 
-            foreach (var member in Faction.FactionMember)
+            foreach (var member in faction.Members)
             {
 
-                if (member.Value.Status.state != "Fallen")
+                if (member.Status != TornPlayer.PlayerStatus.Fallen)
                 {
-                    long lastActionTimestamp = (long)member.Value.LastAction.Timestamp;
+                    long lastActionTimestamp = member.LastActionUnixTime;
 
                     double timeDifference = currentTimestamp - lastActionTimestamp;
 
                     timeDifference = timeDifference / 86400;
-                    //Console.WriteLine(timeDifference);
+
                     if (timeDifference > 1)
                     {
-                        string playerName = member.Value.Name + " [" + member.Key + "]";
+                        string playerName = member.Name + " [" + member.Id + "]";
 
-                        inactiveMembers.Add($"[{playerName}](https://www.torn.com/profiles.php?XID={member.Key})");
-                        //double time_h = timeDifference - (int)timeDifference;
-                        //time_h = time_h * 24;
+                        inactiveMembers.Add($"[{playerName}](https://www.torn.com/profiles.php?XID={member.Id})");
                         inactiveTimes.Add((int)timeDifference + "d " + (int)((timeDifference - (int)timeDifference) * 24) + "h");
-                        //var playerLink = $"[{playerName}](https://www.torn.com/loader.php?sid=attack&user2ID={playerID})";
                     }
                 }
             }
-            long channel_id = long.Parse(discordService.GetInactivePlayerChannelId());
+
+            long channel_id;
+            try
+            {
+                channel_id = long.Parse(discordService.GetInactivePlayerChannelId());
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Error parsing Discord InactivePlayerChannel id", e);
+                return Task.CompletedTask;
+            }
 
             var channel = discord.GetChannelAsync((ulong)channel_id);
             channel.ContinueWith((task) =>

@@ -35,6 +35,7 @@ public class TornApiService
     
     private readonly int _rateLimitPerMinutePerKey;
     private readonly TimeSpan _rateLimitWindow;
+    private readonly ConcurrentDictionary<string, object> _keyLocks = new ConcurrentDictionary<string, object>();
     private readonly ConcurrentDictionary<string, Queue<DateTime>> _keyCallTimestamps;
 
     private const byte AccessLevelPublic   = 0b00000001;
@@ -95,7 +96,7 @@ public class TornApiService
         _rateLimitWindow = TimeSpan.FromSeconds(60);
         _keyCallTimestamps = new ConcurrentDictionary<string, Queue<DateTime>>();
     }
-    
+
     /// <summary>
     /// Checks and applies rate limiting to the supplied Api Key 
     /// </summary>
@@ -103,31 +104,37 @@ public class TornApiService
     /// <returns>bool</returns>
     private bool CheckRateLimit(string apiKey)
     {
-        // Check if timestamps queue exists for the key
-        if (!_keyCallTimestamps.TryGetValue(apiKey, out var timestamps))
-        {
-            // Create a new queue for this key
-            timestamps = new Queue<DateTime>(10);
-            _keyCallTimestamps.TryAdd(apiKey, timestamps);
-        }
-        
-        // Remove timestamps older than 60 seconds
-        while (timestamps.Count > 0 && timestamps.Peek() < DateTime.UtcNow.Subtract(_rateLimitWindow))
-        {
-            timestamps.Dequeue();
-        }
+        // Get or create a lock object for this API key
+        var keyLock = _keyLocks.GetOrAdd(apiKey, new object());
 
-        // Check if we are over the rate limit
-        if (timestamps.Count >= _rateLimitPerMinutePerKey)
-            return false;
-        
-        // Enqueue current timestamp
-        timestamps.Enqueue(DateTime.UtcNow);
+        lock (keyLock)
+        {
+            // Check if timestamps queue exists for the key
+            if (!_keyCallTimestamps.TryGetValue(apiKey, out var timestamps))
+            {
+                // Create a new queue for this key
+                timestamps = new Queue<DateTime>(10);
+                _keyCallTimestamps.TryAdd(apiKey, timestamps);
+            }
 
-        // Must be good
-        return true;
+            // Remove timestamps older than 60 seconds
+            while (timestamps.Count > 0 && timestamps.Peek() < DateTime.UtcNow.Subtract(_rateLimitWindow))
+            {
+                timestamps.Dequeue();
+            }
+
+            // Check if we are over the rate limit
+            if (timestamps.Count >= _rateLimitPerMinutePerKey)
+                return false;
+
+            // Enqueue current timestamp
+            timestamps.Enqueue(DateTime.UtcNow);
+
+            // Must be good
+            return true;
+        }
     }
-    
+
     /// <summary>
     /// Adds the supplied Api key to the database
     /// 2 API calls are made to Torn.
@@ -147,7 +154,7 @@ public class TornApiService
             TornBot.Entities.KeyInfo apiKeyInfo = GetApiKeyInfo(apiKey);
             TornBot.Entities.TornPlayer tornPlayer = GetPlayer(0, apiKey);
 
-            TornBot.Services.Database.Entities.TornPlayer? dbTornPlayer = database.TornPlayers.FirstOrDefault(s => s.Id == tornPlayer.Id);
+            TornBot.Services.Players.Database.Entities.TornPlayer? dbTornPlayer = database.TornPlayers.FirstOrDefault(s => s.Id == tornPlayer.Id);
 
             if (dbTornPlayer != null)
             {
@@ -158,7 +165,7 @@ public class TornApiService
             }
             else
             {
-                database.TornPlayers.Add(new TornBot.Services.Database.Entities.TornPlayer(tornPlayer));
+                database.TornPlayers.Add(new TornBot.Services.Players.Database.Entities.TornPlayer(tornPlayer));
                 database.SaveChanges();
                 //TODO - log added new TornPlayer via AddApiKey
             }
@@ -166,7 +173,7 @@ public class TornApiService
             //add api key with info to database
             UInt32 homeFactionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
 
-            KeyAccessLevel keyAccessLevel = CalculateKeyAccessLevel(apiKeyInfo, tornPlayer.Faction.Id, homeFactionId);
+            KeyAccessLevel keyAccessLevel = CalculateKeyAccessLevel(apiKeyInfo, tornPlayer.FactionId, homeFactionId);
             
             TornBot.Services.Database.Entities.ApiKeys? dbApiKeys = database.ApiKeys.Where(s => s.PlayerId == tornPlayer.Id).FirstOrDefault();
             
@@ -181,7 +188,7 @@ public class TornApiService
                 dbApiKeys.TornStatsApiKey = "";
             }
             
-            dbApiKeys.FactionId = tornPlayer.Faction.Id;
+            dbApiKeys.FactionId = tornPlayer.FactionId;
 
             dbApiKeys.TornApiKey = apiKey;
             dbApiKeys.TornAccessLevel = (byte)keyAccessLevel;
@@ -391,7 +398,7 @@ public class TornApiService
                 //TODO - Log that something went wrong
                 return false;
             }
-            keyFactionId = tornPlayer.Faction.Id;
+            keyFactionId = tornPlayer.FactionId;
         }
         else
             keyFactionId = dbApiKeys.First().FactionId;
@@ -633,9 +640,9 @@ public class TornApiService
     /// Will use the next available API key from the key store
     /// </summary>
     /// <param name="id">Torn Faction id</param>
-    /// <returns>TornApi.Entities.Faction object of the faction</returns>
+    /// <returns>TornBot.Entities.TornFaction object of the faction</returns>
     /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
-    public TornApi.Entities.Faction GetFaction(UInt32 id)
+    public TornBot.Entities.TornFaction GetFaction(UInt32 id)
     {
         //Loop until we get a valid response or run out of API keys or a other API call failure
         while (true)
@@ -681,9 +688,9 @@ public class TornApiService
     /// </summary>
     /// <param name="id">Torn Player id</param>
     /// <param name="apiKey">Api Key to use</param>
-    /// <returns>TornApi.Entities.Faction object of the faction</returns>
+    /// <returns>TornBot.Entities.TornFaction object of the faction</returns>
     /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
-    public TornApi.Entities.Faction GetFaction(UInt32 id, string key)
+    public TornBot.Entities.TornFaction GetFaction(UInt32 id, string key)
     {
         string url = String.Format("faction/{0}?selections=&key={1}", id.ToString(), key);
 
@@ -692,9 +699,10 @@ public class TornApiService
             string apiResponse = MakeApiRequest(url);
 
             TornApi.Entities.Faction faction = JsonSerializer.Deserialize<TornApi.Entities.Faction>(apiResponse);
-            return faction;
+            
+            return faction.ToTornFaction();
         }
-        catch (ApiCallFailureException)
+        catch (ApiCallFailureException e)
         {
             throw;
         }

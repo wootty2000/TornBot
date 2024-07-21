@@ -22,7 +22,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using TornBot.Exceptions;
 using TornBot.Services.Database;
-using TornBot.Services.Database.Entities;
+using TornBot.Services.Players.Database.Entities;
 using TornBot.Services.TornApi.Services;
 
 namespace TornBot.Services.TornStatsApi.Services
@@ -66,8 +66,7 @@ namespace TornBot.Services.TornStatsApi.Services
                 CheckKeyIsValid(apiKey);
                 TornBot.Entities.TornPlayer tornPlayer = _tornApiService.GetPlayer(0, apiKey);
 
-                TornBot.Services.Database.Entities.TornPlayer? dbTornPlayer =
-                    database.TornPlayers.FirstOrDefault(s => s.Id == tornPlayer.Id);
+                TornPlayer? dbTornPlayer = database.TornPlayers.FirstOrDefault(s => s.Id == tornPlayer.Id);
 
                 if (dbTornPlayer != null)
                 {
@@ -96,7 +95,7 @@ namespace TornBot.Services.TornStatsApi.Services
                     dbApiKeys.TornApiKey = "";
                 }
 
-                dbApiKeys.FactionId = tornPlayer.Faction.Id;
+                dbApiKeys.FactionId = tornPlayer.FactionId;
 
                 dbApiKeys.TornStatsApiKey = apiKey;
                 dbApiKeys.TornStatsApiAddedTimestamp = DateTime.UtcNow;

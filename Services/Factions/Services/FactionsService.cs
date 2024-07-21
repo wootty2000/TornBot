@@ -19,7 +19,9 @@ using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using TornBot.Entities;
 using TornBot.Exceptions;
+using TornBot.Services.Factions.Database.Dao;
 using TornBot.Services.TornApi.Services;
 
 namespace TornBot.Services.Factions.Services;
@@ -27,15 +29,49 @@ namespace TornBot.Services.Factions.Services;
 public class FactionsService : IHostedService
 {
     private readonly IConfigurationRoot _config;
+    private readonly IFactionDao _factionDao;
     private readonly TornApiService _tornApiService;
 
     public FactionsService(
         IConfigurationRoot config,
+        IFactionDao factionDao,
         TornApiService tornApiService
     )
     {
         _config = config;
+        _factionDao = factionDao;
         _tornApiService = tornApiService;
+    }
+
+    /// <summary>
+    /// Gets the faction name from the database by faction id
+    /// </summary>
+    /// <param name="id">Faction id</param>
+    /// <returns>string</returns>
+    public string GetFactionNameById(UInt32 id)
+    {
+        // TODO If there is no result in the DB, get it from Torn API, save it and then return the name
+        return _factionDao.GetFactionNameById(id);
+    }
+
+    /// <summary>
+    /// Gets a TornFaction object from the database by faction id
+    /// </summary>
+    /// <param name="id">Faction id</param>
+    /// <returns>Entities.TornFaction</returns>
+    public Entities.TornFaction GetFaction(UInt32 id)
+    {
+        Database.Entities.TornFactions? faction = _factionDao.GetFactionById(id);
+
+        if (faction == null)
+            return new TornFaction();
+        else
+            return faction.ToTornFaction();
+    }
+
+    public void UpdateFaction(TornFaction faction)
+    {
+        _factionDao.AddOrUpdateTornFaction(faction);
     }
     
     /// <summary>
@@ -84,7 +120,8 @@ public class FactionsService : IHostedService
         //TODO = Move this to the DB
         UInt32 homeFactionId = GetHomeFactionId();
 
-        TornApi.Entities.Faction faction = _tornApiService.GetFaction(factionID);
+        TornBot.Entities.TornFaction faction = _tornApiService.GetFaction(factionID);
+        _factionDao.AddOrUpdateTornFaction(faction);
 
         string[] pinWheel = { "|", "/", "-", "\\" };
         byte pinWheelPos = 0;
@@ -94,11 +131,11 @@ public class FactionsService : IHostedService
 
         byte membersChecked = 0;
 
-        foreach (var member in faction.FactionMember)
+        foreach (var member in faction.Members)
         {
-            if (member.Value.Status.state != "Fallen")
+            if (member.Status != TornPlayer.PlayerStatus.Fallen)
             {
-                UInt32 memberID = member.Key;
+                UInt32 memberID = member.Id;
                 while (true)
                 {
                     try
@@ -115,11 +152,12 @@ public class FactionsService : IHostedService
                             {
                                 if (ctx is not null)
                                 {
+                                    // TODO Move away from .Wait()
                                     ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(
                                         String.Format(
                                             "Checked {0} of {1} faction members. Waiting for API keys to become usable (rate limiting) {2}",
                                             membersChecked,
-                                            faction.FactionMember.Count,
+                                            faction.Members.Count,
                                             pinWheel[pinWheelPos]
                                         )))
                                     .Wait();
@@ -150,9 +188,12 @@ public class FactionsService : IHostedService
 
             membersChecked++;
             if (ctx is not null)
-                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(String.Format("Checked {0} of {1} faction members ", membersChecked, faction.FactionMember.Count))).Wait();
+                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(
+                    String.Format("Checked {0} of {1} faction members ", membersChecked, faction.Members.Count)
+                    )).Wait();
         }
 
+        // TODO If the faction we are checking is not a home faction, then we can skip the secondary check
         membersChecked = 0;
         foreach (Entities.TornPlayer tornPlayerInitial in tornPlayerInitialList)
         {
@@ -207,9 +248,6 @@ public class FactionsService : IHostedService
             
             if (tornPlayer.Revivable == 1)
             {
-                //The tag image has to be added from the faction as it is not accessible through the user
-                tornPlayer.Faction.Tag_image = faction.TagImage; 
-
                 tornPlayerExtRevivableList.Add(tornPlayer);
             }
 
@@ -223,6 +261,19 @@ public class FactionsService : IHostedService
         return tornPlayerExtRevivableList; 
     }
 
+    public List<TornFaction> GetFactionsForMonitoring()
+    {
+        List<Database.Entities.TornFactions> dbFactions = _factionDao.GetFactionsForMonitoring();
+
+        List<TornFaction> tornFactions = new List<TornFaction>();
+        foreach (var dbFaction in dbFactions)
+        {
+            tornFactions.Add(dbFaction.ToTornFaction());
+        }
+
+        return tornFactions;
+    }
+    
     public UInt32 GetHomeFactionId()
     {
         //TODO = Move this to the DB
