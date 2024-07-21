@@ -77,8 +77,6 @@ public class RecordFactionActivityJob : WorkerJob
 
             var factionTasks = dbFactionsList.Select(async dbFaction =>
             {
-                
-
                 await semaphore.WaitAsync();
                 try
                 {
@@ -97,16 +95,14 @@ public class RecordFactionActivityJob : WorkerJob
 
             foreach (var faction in factionsList)
             {
-                //TODO Update db with faction
                 foreach (var member in faction.Members)
                 {
                     _playersService.RecordPlayerStatus(member, now);
                     _playersService.SavePlayer(member);
                 }
+
                 _factionsService.UpdateFaction(faction);
             }
-            
-            //_playersService.ResetPlayerStatusDaoCache();
         }
         catch (ApiCallFailureException e)
         {
