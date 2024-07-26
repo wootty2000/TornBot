@@ -15,7 +15,7 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-using Microsoft.Extensions.Configuration;
+using System.Threading.Channels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -64,7 +64,7 @@ public class RecordFactionActivityJob : WorkerJob
         _playersService = playersService;
         _factionsService = factionsService;
     }
-
+    
     public async Task Execute(IJobExecutionContext context)
     {
         try
@@ -73,6 +73,27 @@ public class RecordFactionActivityJob : WorkerJob
             List<TornFaction> factionsList = new List<TornFaction>();
             DateTime now = DateTime.UtcNow;
             
+            var factionChannel = Channel.CreateUnbounded<TornBot.Entities.TornFaction>();
+
+            var consumerTask = Task.Run(async () =>
+            {
+                await foreach (var faction in factionChannel.Reader.ReadAllAsync())
+                {
+                    try
+                    {
+                        _playersService.SavePlayers(faction.Members);
+                        _playersService.RecordPlayerStatuses(faction.Members, now);
+                        
+                        _factionsService.UpdateFaction(faction);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e,"Something went wrong saving members from " + faction.Id);
+                        throw;
+                    }
+                }
+            });
+            
             var semaphore = new SemaphoreSlim(_maxNumberThreads);
 
             var factionTasks = dbFactionsList.Select(async dbFaction =>
@@ -80,29 +101,43 @@ public class RecordFactionActivityJob : WorkerJob
                 await semaphore.WaitAsync();
                 try
                 {
-                    await Task.Run(() =>
+                    TornBot.Entities.TornFaction faction;
+                    while (true)
                     {
-                        TornBot.Entities.TornFaction faction = _tornApiService.GetFaction(dbFaction.Id);
-                        factionsList.Add(faction);
-                    });
+                        try
+                        {
+                            faction = _tornApiService.GetFaction(dbFaction.Id);
+                            await factionChannel.Writer.WriteAsync(faction);
+                            break;
+                        }
+                        catch (ApiCallFailureException e)
+                        {
+                            if (e.InnerException is not null && e.InnerException is AllKeysRateLimitedException)
+                            {
+                                await Task.Delay(5000);
+                            }
+                            else
+                            {
+                                throw;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            throw;
+                        }
+                    }
                 }
                 finally
                 {
                     semaphore.Release();
                 }
             }).ToList();
+            
             await Task.WhenAll(factionTasks);
+            factionChannel.Writer.Complete();
 
-            foreach (var faction in factionsList)
-            {
-                foreach (var member in faction.Members)
-                {
-                    _playersService.RecordPlayerStatus(member, now);
-                    _playersService.SavePlayer(member);
-                }
+            await consumerTask;
 
-                _factionsService.UpdateFaction(faction);
-            }
         }
         catch (ApiCallFailureException e)
         {

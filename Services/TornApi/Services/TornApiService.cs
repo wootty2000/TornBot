@@ -21,6 +21,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TornBot.Entities;
 using TornBot.Exceptions;
 using TornBot.Services.Database;
 
@@ -678,7 +679,7 @@ public class TornApiService
             }
             catch (Exception e)
             {
-                throw new ApiCallFailureException("Error in Torn API GetPlayer(UInt32 id)", e);
+                throw new ApiCallFailureException("Error in Torn API GetFaction(UInt32 id)", e);
             }
         }
     }
