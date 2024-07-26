@@ -222,6 +222,18 @@ namespace TornBot.Services.Players.Service
             //TODO We should be passing a DB entity in to the DAO, not a generic entity
             _tornPlayerDao.SavePlayer(player);
         }
+        
+        public void SavePlayers(List<TornPlayer> players)
+        {
+            List<Database.Entities.TornPlayer> dbPlayers = new List<Database.Entities.TornPlayer>();
+
+            foreach (var player in players)
+            {
+                dbPlayers.Add(new Database.Entities.TornPlayer(player));
+            }
+            _tornPlayerDao.SavePlayers(dbPlayers);
+        }
+
 
         /// <summary>
         /// Attempts to find a Torn Player by name
@@ -561,6 +573,18 @@ namespace TornBot.Services.Players.Service
         public void RecordPlayerStatus(TornBot.Entities.TornPlayer tornPlayer, DateTime now)
         {
             _playerStatusDao.RecordPlayerStatus(tornPlayer.Id, (byte)tornPlayer.Status, (byte)tornPlayer.OnlineStatus, now); 
+        }
+
+        public void RecordPlayerStatuses(List<TornPlayer> players, DateTime now)
+        {
+            List<(UInt32 playerId, byte status, byte onlineStatus)> playerStatuses = new List<(uint playerId, byte status, byte onlineStatus)>();
+
+            foreach (var player in players)
+            {
+                playerStatuses.Add((player.Id, (byte)player.Status, (byte)player.OnlineStatus));
+            }
+            
+            _playerStatusDao.RecordPlayerStatuses(playerStatuses, now);
         }
         
         /// <summary>

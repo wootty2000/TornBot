@@ -16,6 +16,7 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json.Linq;
 using TornBot.Services.Players.Database.Entities;
@@ -27,11 +28,29 @@ public class PlayerStatusDao : IPlayerStatusDao
 {
     private readonly PlayerStatusDbContext _context;
     private readonly DbSet<PlayerStatus> _dbSet;
-
+    private IDbContextTransaction _transaction;
+    
     public PlayerStatusDao(PlayerStatusDbContext context)
     {
         _context = context;
         _dbSet = _context.PlayerStatus;
+    }
+
+    public void BeginTransaction()
+    {
+        _transaction = _context.Database.BeginTransaction();
+    }
+
+    public void CommitTransaction()
+    {
+        _transaction.Commit();
+        _transaction.Dispose();
+    }
+
+    public void RollbackTransaction()
+    {
+        _transaction.Rollback();
+        _transaction.Dispose();
     }
 
     //
@@ -45,8 +64,6 @@ public class PlayerStatusDao : IPlayerStatusDao
 
         var weekStartingStr = weekStarting.ToString("yyyy-MM-dd");
 
-        var path = $"$.{day}.{time}";
-        
         var statusJson = new JArray(status, onlineStatus).ToString(Newtonsoft.Json.Formatting.None);
 
         var mergePatchJson = $"{{\"{day}\": {{\"{time}\": {statusJson}}}}}";
@@ -65,6 +82,46 @@ public class PlayerStatusDao : IPlayerStatusDao
         };
 
         _context.Database.ExecuteSqlRaw(sql, queryParams);
+    }
+    
+    public void RecordPlayerStatuses(List<(UInt32 playerId, byte status, byte onlineStatus)> playerStatuses, DateTime now)
+    {
+        // DayOfWeek 0 is Sunday. We want to start on Monday
+        var weekStarting = now.Date.AddDays(-(int)now.DayOfWeek + (now.DayOfWeek == DayOfWeek.Sunday ? -6 : 1));
+
+        var day = now.ToString("dddd").ToLower();
+        var time = now.ToString("HH:mm");
+
+        var weekStartingStr = weekStarting.ToString("yyyy-MM-dd");
+
+        int index = 0;
+        
+        string sql = @"
+            INSERT INTO PlayerStatus (PlayerId, WeekStarting, StatusLog)
+            VALUES (@playerId, @weekStarting, @mergePatchJson)
+            ON DUPLICATE KEY UPDATE
+            StatusLog = JSON_MERGE_PATCH(StatusLog, @mergePatchJson);";
+
+        _context.Database.BeginTransaction();
+        
+        foreach (var playerStatus in playerStatuses)
+        {
+            var statusJson = new JArray(playerStatus.status, playerStatus.onlineStatus).ToString(Newtonsoft.Json.Formatting.None);
+
+            var mergePatchJson = $"{{\"{day}\": {{\"{time}\": {statusJson}}}}}";
+
+            MySqlParameter[] queryParams = new MySqlParameter[]
+            {
+                new MySqlParameter("@playerId", playerStatus.playerId),
+                new MySqlParameter("@weekStarting", weekStartingStr),
+                new MySqlParameter("@mergePatchJson", MySqlDbType.JSON) { Value = mergePatchJson }
+            };
+
+            _context.Database.ExecuteSqlRaw(sql, queryParams);
+        }
+
+        _context.Database.CommitTransaction();
+
     }
     
     public List<DateTime> GetPlayerStatusDatesForPlayer(UInt32 playerId)

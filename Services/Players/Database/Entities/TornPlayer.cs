@@ -45,8 +45,30 @@ namespace TornBot.Services.Players.Database.Entities
             FactionId = tornPlayer.FactionId;
             LastUpdated = DateTime.UtcNow;
         }
+
+        public bool IsEqual(Database.Entities.TornPlayer tornPlayer)
+        {
+            if (Id != tornPlayer.Id)
+                return false;
+            if (!Name.Equals(tornPlayer.Name))
+                return false;
+            if (Level != tornPlayer.Level)
+                return false;
+            if (FactionId != tornPlayer.FactionId)
+                return false;
+
+            return true;
+        }
         
         public void ParseTornPlayer(TornBot.Entities.TornPlayer tornPlayer)
+        {
+            Name = tornPlayer.Name;
+            Level = tornPlayer.Level;
+            FactionId = tornPlayer.FactionId;
+            LastUpdated = DateTime.UtcNow;
+        }
+
+        public void ParseTornPlayer(Database.Entities.TornPlayer tornPlayer)
         {
             Name = tornPlayer.Name;
             Level = tornPlayer.Level;

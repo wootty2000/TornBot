@@ -57,6 +57,26 @@ public class TornPlayerDao : ITornPlayerDao
             _context.SaveChanges();
         }
     }
+
+    public void SavePlayers(List<Database.Entities.TornPlayer> tornPlayers)
+    {
+        foreach (var tornPlayer in tornPlayers)
+        {
+            TornPlayer? dbTornPlayer = _dbSet.FirstOrDefault(tp => tp.Id == tornPlayer.Id);
+
+            if (dbTornPlayer == null)
+            {
+                _dbSet.Add(tornPlayer);
+            }
+            else if (!dbTornPlayer.IsEqual(tornPlayer))
+            {
+                dbTornPlayer.ParseTornPlayer(tornPlayer);
+                _dbSet.Update(dbTornPlayer);
+            }
+        }
+
+        _context.SaveChanges();
+    }
     
     public List<TornBot.Entities.TornPlayer> GetMembersInFaction(UInt32 factionId)
     {

@@ -21,5 +21,6 @@ public interface ITornPlayerDao
 {
     public TornBot.Entities.TornPlayer GetPlayer(UInt32 playerId);
     public void SavePlayer(TornBot.Entities.TornPlayer tornPlayer);
+    public void SavePlayers(List<Database.Entities.TornPlayer> tornPlayers);
     public List<TornBot.Entities.TornPlayer> GetMembersInFaction(UInt32 factionId);
 }
