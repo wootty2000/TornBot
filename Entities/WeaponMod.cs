@@ -19,7 +19,7 @@ namespace TornBot.Entities;
 
 public class WeaponMod
 {
-    public UInt16 Id { get; set; }
-    public string Title { get; set; }
-    public string Description { get; set; }
+    public UInt16 Id { get; set; } = 0;
+    public string Title { get; set; } = "";
+    public string Description { get; set; } = "";
 }

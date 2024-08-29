@@ -1,0 +1,2 @@
+ALTER TABLE Settings
+    CHANGE Setting Name LONGTEXT NOT NULL;

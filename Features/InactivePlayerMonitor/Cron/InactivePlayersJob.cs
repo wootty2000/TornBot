@@ -111,7 +111,7 @@ namespace TornBot.Features.InactivePlayerMonitor.Cron
             }
             catch (Exception e)
             {
-                _logger.LogError("Error parsing Discord InactivePlayerChannel id", e);
+                _logger.LogError(e, "Error parsing Discord InactivePlayerChannel id");
                 return Task.CompletedTask;
             }
 

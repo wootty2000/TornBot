@@ -22,7 +22,8 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using TornBot.Exceptions;
 using TornBot.Services.Database;
-using TornBot.Services.Players.Database.Entities;
+using TornBot.Services.Database.TornPlayers.Entities;
+using TornBot.Services.Database.TornPlayers.Service;
 using TornBot.Services.TornApi.Services;
 
 namespace TornBot.Services.TornStatsApi.Services
@@ -32,18 +33,20 @@ namespace TornBot.Services.TornStatsApi.Services
         private string baseUrl = "https://www.tornstats.com/api/";
 
         private readonly ILogger _logger;
-        private readonly IServiceProvider _serviceProvider;
         private readonly IServiceProvider _serviceProviderScoped;
         private readonly TornApiService _tornApiService;
+        private readonly TornPlayersService _tornPlayersService;
 
         public TornStatsApiService(
             ILogger<TornStatsApiService> logger,
             IServiceProvider serviceProvider,
-            TornApiService tornApiService)
+            TornApiService tornApiService,
+            TornPlayersService tornPlayersService
+        )
         {
             _logger = logger;
-            _serviceProvider = serviceProvider;
             _tornApiService = tornApiService;
+            _tornPlayersService = tornPlayersService;
 
             _serviceProviderScoped = serviceProvider.CreateScope().ServiceProvider;
         }
@@ -64,26 +67,12 @@ namespace TornBot.Services.TornStatsApi.Services
             try
             {
                 CheckKeyIsValid(apiKey);
-                TornBot.Entities.TornPlayer tornPlayer = _tornApiService.GetPlayer(0, apiKey);
+                TornBot.Entities.TornPlayer apiTornPlayer = _tornApiService.GetPlayer(0, apiKey);
 
-                TornPlayer? dbTornPlayer = database.TornPlayers.FirstOrDefault(s => s.Id == tornPlayer.Id);
-
-                if (dbTornPlayer != null)
-                {
-                    dbTornPlayer.ParseTornPlayer(tornPlayer);
-                    database.TornPlayers.Update(dbTornPlayer);
-                    database.SaveChanges();
-                    //TODO - log updated TornPlayer via AddApiKey
-                }
-                else
-                {
-                    database.TornPlayers.Add(new TornPlayer(tornPlayer));
-                    database.SaveChanges();
-                    //TODO - log added new TornPlayer via AddApiKey
-                }
+                _tornPlayersService.SavePlayer(apiTornPlayer);
                 
                 TornBot.Services.Database.Entities.ApiKeys? dbApiKeys =
-                    database.ApiKeys.FirstOrDefault(s => s.PlayerId == tornPlayer.Id);
+                    database.ApiKeys.FirstOrDefault(s => s.PlayerId == apiTornPlayer.Id);
                 bool newApiKey = false;
 
                 if (dbApiKeys == null) //add new api key
@@ -91,11 +80,11 @@ namespace TornBot.Services.TornStatsApi.Services
                     dbApiKeys = new TornBot.Services.Database.Entities.ApiKeys();
                     newApiKey = true;
 
-                    dbApiKeys.PlayerId = tornPlayer.Id;
+                    dbApiKeys.PlayerId = apiTornPlayer.Id;
                     dbApiKeys.TornApiKey = "";
                 }
 
-                dbApiKeys.FactionId = tornPlayer.FactionId;
+                dbApiKeys.FactionId = apiTornPlayer.FactionId;
 
                 dbApiKeys.TornStatsApiKey = apiKey;
                 dbApiKeys.TornStatsApiAddedTimestamp = DateTime.UtcNow;

@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Logging;
 using NLog.Extensions.Logging;
 using TornBot.Services.Database;
+using TornBot.Services.Database.Migrations.Service;
 using TornBot.Services.Logger;
 
 namespace TornBot
@@ -44,9 +45,6 @@ namespace TornBot
             var builder = WebApplication.CreateBuilder();
             var services = builder.Services;
             
-            // Add the configuration to the registered services
-            services.AddSingleton(config);
-                        
             // Configure NLog
             new LoggerModule().ConfigureNLog(config, services);
             services.AddLogging(logging =>
@@ -59,7 +57,9 @@ namespace TornBot
             DatabaseContext.Init(config, services);
 
             //Load all the migrations
-            DatabaseContext.RunMigrations(services.BuildServiceProvider());
+            MigrationsService migrations =
+                services.BuildServiceProvider().GetRequiredService<MigrationsService>();
+            migrations.RunMigrations();
              
             // RegisterModules will find all the IModule modules and call the module's RegisterModule function
             ModuleExtensions.RegisterModules(services);

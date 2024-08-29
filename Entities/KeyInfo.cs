@@ -25,12 +25,8 @@ namespace TornBot.Entities
 {
     public class KeyInfo
     {
-        private string key = "";
-        private UInt16 tornAccessLevel = 0;
-        private List<string> selectionFaction;
-
-        public string Key { get; set; }
-        public UInt16 TornAccessLevel { get; set; }
-        public List<string> SelectionFaction { get; set; }
+        public string Key { get; set; } = "";
+        public UInt16 TornAccessLevel { get; set; } = 0;
+        public List<string> SelectionFaction { get; set; } = new List<string>();
     }
 }
