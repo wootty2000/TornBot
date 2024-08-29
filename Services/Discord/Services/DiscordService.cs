@@ -24,65 +24,85 @@ using DSharpPlus;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Reflection;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
 using NLog.Config;
 using TornBot.Services.Discord.Interfaces;
 using TornBot.Services.Logger;
 using TornBot.Services.Logger.Targets;
+using TornBot.Services.Settings.Service;
 
 namespace TornBot.Services.Discord.Services
 {
     public sealed class DiscordService : IHostedService
     {
-        private readonly IConfigurationRoot _config;
         private readonly ILogger<DiscordService> _logger;
-        private readonly IHostApplicationLifetime _applicationLifetime;
         private readonly LoggingConfiguration _nlogConfig;
-        private readonly DiscordClient discord;
-        private SlashCommandsExtension slashCommands;
-        private static DiscordClient Client { get; set; }
+        private readonly SettingsDiscordService _settingsDiscordService;
+        private readonly DiscordClient _discord;
+        private SlashCommandsExtension _slashCommands;
 
         public DiscordService(
-            IConfigurationRoot config,
             ILogger<DiscordService> logger, 
-            IHostApplicationLifetime applicationLifetime,
-            LoggingConfiguration nlogConfig
+            LoggingConfiguration nlogConfig,
+            SettingsDiscordService settingsDiscordService
         )
         {
-            _config = config;
             _logger = logger;
-            _applicationLifetime = applicationLifetime;
             _nlogConfig = nlogConfig;
-            
-            discord = new(new()
+
+            _settingsDiscordService = settingsDiscordService;
+            string discordToken = settingsDiscordService.GetToken();
+
+            if (string.IsNullOrWhiteSpace(discordToken))
             {
-                Token = config.GetValue<string>("token"),
-                TokenType = DSharpPlus.TokenType.Bot,
-                Intents = DiscordIntents.All,
-                LoggerFactory = new NLogLoggerFactory()              
-            });
+                logger.LogError("Failed to create DiscordClient as Token has not been set in the database");
+                _discord = null;
+            }
+            else
+            {
+                _discord = new(new()
+                {
+                    Token = discordToken,
+                    TokenType = DSharpPlus.TokenType.Bot,
+                    Intents = DiscordIntents.All,
+                    LoggerFactory = new NLogLoggerFactory()              
+                });
+            }
         }
 
         public async Task StartAsync(CancellationToken token)
         {
-            IServiceProvider serviceProvider = TornBotApplication.GetIServiceProvider();
+            if (_discord == null)
+                return;
             
-            DiscordActivity status = new("Torn - Dystopia", ActivityType.Watching);
+            IServiceProvider serviceProvider = TornBotApplication.GetIServiceProvider();
+
+            string watchingName = _settingsDiscordService.GetFactionName();
+
+            DiscordActivity discordActivity = null;
+            if (!string.IsNullOrWhiteSpace(watchingName))
+            {
+                discordActivity = new($"Torn - {watchingName}", ActivityType.Watching);
+            }
 
             Assembly asm = Assembly.GetExecutingAssembly();
 
             //--------------------
             // Register event handlers
             var commandModuleType = typeof(IDiscordEventHandlerModule);
-            var commandModules = Assembly.GetExecutingAssembly().GetTypes()
-                .Where(t => commandModuleType.IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
+            var commandModules = 
+                Assembly.GetExecutingAssembly().GetTypes()
+                .Where(
+                    t => commandModuleType.IsAssignableFrom(t) && 
+                    !t.IsInterface &&
+                    !t.IsAbstract
+                );
 
             foreach (var module in commandModules)
             {
                 var commandInstance = (IDiscordEventHandlerModule)ActivatorUtilities.CreateInstance(serviceProvider, module);
-                commandInstance.RegisterEventHandlers(discord);
+                commandInstance.RegisterEventHandlers(_discord);
             }
             // End of registering event handlers
             //--------------------
@@ -98,49 +118,74 @@ namespace TornBot.Services.Discord.Services
             {
                 Services = TornBotApplication.GetIServiceProvider()
             };
-            slashCommands = discord.UseSlashCommands(slashConfig);
-
-//#if RELEASE
-//            slashCommands.RegisterCommands(asm);
-//#else
-            UInt64 guild = _config.GetValue<UInt64>("TestGuild");
-            Console.WriteLine("guild: " + guild);
-
-            Console.WriteLine("SlashCommands are registered in debug mode");
-            slashCommands.RegisterCommands(asm, guild);
-//#endif
+            _slashCommands = _discord.UseSlashCommands(slashConfig);
+            
+            try
+            {
+                string guildId = _settingsDiscordService.GetGuildId();
+                if (string.IsNullOrWhiteSpace(guildId))
+                    _logger.LogError("Error registering Discord slash commands as guildId has not been set in the database");
+                else
+                {
+                    if (!UInt64.TryParse(guildId, out UInt64 guildIdUInt))
+                        _logger.LogError("GuildId value in database is not valid");
+                    else
+                        _slashCommands.RegisterCommands(asm, guildIdUInt);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error registering Discord slash command. Check inner exception");
+            }
+            
+            
             // End of Slash Commands
             //----------------------
 
-            discord.GuildDownloadCompleted += GuildDownload;
+            _discord.GuildDownloadCompleted += GuildDownload;
             //slashCommands.SlashCommandErrored += EventListener.OnSlashCommandErrored;
             //slashCommands.AutocompleteErrored += EventListener.OnAutocompleteError;
             
-            await discord.ConnectAsync(status, DSharpPlus.Entities.UserStatus.Online);
+            await _discord.ConnectAsync(discordActivity, DSharpPlus.Entities.UserStatus.Online);
         }
 
         public async Task StopAsync(CancellationToken token)
         {
-            await discord.DisconnectAsync();
+            await _discord.DisconnectAsync();
             // More cleanup possibly here
         }
 
         public DiscordClient GetDiscordClient()
         {
-            return discord;
+            return _discord;
         }
 
         private async Task GuildDownload(DiscordClient sender, GuildDownloadCompletedEventArgs args)
         {
-            //TODO - Move to DB
-            var channelId = _config.GetValue<string>("LogChannelId");
-            if (channelId is null)
-                return;
-            
-            var logChannel = await discord.GetChannelAsync(ulong.Parse(channelId));
+            try
+            {
+                string logChannelId = _settingsDiscordService.GetLogChannelId();
+                
 
-            // Initialize the Discord target with the connected client and log channel
-            InitializeDiscordTarget(discord, logChannel);
+                if (string.IsNullOrEmpty(logChannelId))
+                    _logger.LogError("Error initialising logging to Discord as LogChannelId has not been set in the database");
+                else
+                {
+                    if (!UInt64.TryParse(logChannelId, out UInt64 logChannelIdUInt))
+                        _logger.LogError("LogChannelId value in database is not valid");
+                    else
+                    {
+                        var logChannel = await _discord.GetChannelAsync(logChannelIdUInt);
+                        
+                        // Initialize the Discord target with the connected client and log channel
+                        InitializeDiscordTarget(_discord, logChannel);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error initialising logging to Discord. See inner exception");
+            }
         }
         
         private void InitializeDiscordTarget(DiscordClient discordClient, DiscordChannel logChannel)
@@ -156,12 +201,12 @@ namespace TornBot.Services.Discord.Services
         
         public string GetStocksChannelId()
         {
-            return _config.GetValue<string>("StocksChannelId");
+            return _settingsDiscordService.GetStockChannelId();
         }
-        
+
         public string GetInactivePlayerChannelId()
         {
-            return _config.GetValue<string>("InactivePlayerChannelId");
+            return _settingsDiscordService.GetInactiveChannelId();
         }
     }
 }

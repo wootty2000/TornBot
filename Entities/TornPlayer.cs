@@ -37,6 +37,7 @@ namespace TornBot.Entities
         public PlayerOnlineStatus OnlineStatus { get; set; } = PlayerOnlineStatus.Unknown;
         public DateTime LastAction { get; set; } = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         public long LastActionUnixTime => new DateTimeOffset(LastAction).ToUnixTimeSeconds();
+        public DateTime DatabaseLastUpdated = DateTime.UnixEpoch;
 
         public enum PlayerStatus
         {

@@ -15,32 +15,35 @@
 //  You should have received a copy of the GNU Affero General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+using System.Collections;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using TornBot.Entities;
 using TornBot.Exceptions;
-using TornBot.Services.Factions.Database.Dao;
+using TornBot.Services.Database.TornFactions.Entities;
+using TornBot.Services.Database.TornFactions.Service;
+using TornBot.Services.Settings.Service;
 using TornBot.Services.TornApi.Services;
 
 namespace TornBot.Services.Factions.Services;
 
 public class FactionsService : IHostedService
 {
-    private readonly IConfigurationRoot _config;
-    private readonly IFactionDao _factionDao;
+    private readonly TornFactionsService _tornFactionsService;
     private readonly TornApiService _tornApiService;
+    private readonly SettingsFactionService _settingsFactionService;
 
     public FactionsService(
-        IConfigurationRoot config,
-        IFactionDao factionDao,
-        TornApiService tornApiService
+        TornFactionsService tornFactionsService,
+        TornApiService tornApiService,
+        SettingsFactionService settingsFactionService
     )
     {
-        _config = config;
-        _factionDao = factionDao;
+        _tornFactionsService = tornFactionsService;
         _tornApiService = tornApiService;
+        _settingsFactionService = settingsFactionService;
     }
 
     /// <summary>
@@ -51,7 +54,7 @@ public class FactionsService : IHostedService
     public string GetFactionNameById(UInt32 id)
     {
         // TODO If there is no result in the DB, get it from Torn API, save it and then return the name
-        return _factionDao.GetFactionNameById(id);
+        return _tornFactionsService.GetFactionNameById(id);
     }
 
     /// <summary>
@@ -61,7 +64,7 @@ public class FactionsService : IHostedService
     /// <returns>Entities.TornFaction</returns>
     public Entities.TornFaction GetFaction(UInt32 id)
     {
-        Database.Entities.TornFactions? faction = _factionDao.GetFactionById(id);
+        TornFactions? faction = _tornFactionsService.GetFactionById(id);
 
         if (faction == null)
             return new TornFaction();
@@ -71,7 +74,7 @@ public class FactionsService : IHostedService
 
     public void UpdateFaction(TornFaction faction)
     {
-        _factionDao.AddOrUpdateTornFaction(faction);
+        _tornFactionsService.SaveFaction(faction);
     }
     
     /// <summary>
@@ -118,10 +121,10 @@ public class FactionsService : IHostedService
         List<Entities.TornPlayer> tornPlayerExtRevivableList = new List<Entities.TornPlayer>();
 
         //TODO = Move this to the DB
-        UInt32 homeFactionId = GetHomeFactionId();
+        UInt32[] homeFactionIds = GetHomeFactionIds();
 
         TornBot.Entities.TornFaction faction = _tornApiService.GetFaction(factionID);
-        _factionDao.AddOrUpdateTornFaction(faction);
+        _tornFactionsService.SaveFaction(faction);
 
         string[] pinWheel = { "|", "/", "-", "\\" };
         byte pinWheelPos = 0;
@@ -193,77 +196,80 @@ public class FactionsService : IHostedService
                     )).Wait();
         }
 
-        // TODO If the faction we are checking is not a home faction, then we can skip the secondary check
-        membersChecked = 0;
-        foreach (Entities.TornPlayer tornPlayerInitial in tornPlayerInitialList)
-        {
-            while (true)
+        if (!homeFactionIds.Contains(factionID))
+        { 
+            membersChecked = 0;
+            foreach (Entities.TornPlayer tornPlayerInitial in tornPlayerInitialList)
             {
-                try
+                while (true)
                 {
-                    tornPlayer = _tornApiService.GetPlayer(tornPlayerInitial.Id, true);
-                    pinWheelPos = 0;
-                    break;
-                }
-                catch (ApiCallFailureException e)
-                {
-                    if (e.InnerException is AllKeysRateLimitedException)
+                    try
                     {
-                        for (sleepCounter = 0; sleepCounter < sleepSteps; sleepCounter++)
+                        tornPlayer = _tornApiService.GetPlayer(tornPlayerInitial.Id, true);
+                        pinWheelPos = 0;
+                        break;
+                    }
+                    catch (ApiCallFailureException e)
+                    {
+                        if (e.InnerException is AllKeysRateLimitedException)
                         {
-                            if (ctx is not null)
+                            for (sleepCounter = 0; sleepCounter < sleepSteps; sleepCounter++)
                             {
-                                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(
-                                    String.Format(
-                                        "Rechecked {0} of {1} revivable members. Waiting for API keys to become usable (rate limiting) {2}",
-                                        membersChecked,
-                                        tornPlayerInitialList.Count,
-                                        pinWheel[pinWheelPos]
-                                    )))
-                                    .Wait();
+                                if (ctx is not null)
+                                {
+                                    ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(
+                                        String.Format(
+                                            "Rechecked {0} of {1} revivable members. Waiting for API keys to become usable (rate limiting) {2}",
+                                            membersChecked,
+                                            tornPlayerInitialList.Count,
+                                            pinWheel[pinWheelPos]
+                                        )))
+                                        .Wait();
+                                }
+
+                                if (++pinWheelPos > pinWheel.Length - 1)
+                                    pinWheelPos = 0;
+
+                                System.Threading.Thread.Sleep(totalSleepLength / sleepSteps);
                             }
-
-                            if (++pinWheelPos > pinWheel.Length - 1)
-                                pinWheelPos = 0;
-
-                            System.Threading.Thread.Sleep(totalSleepLength / sleepSteps);
+                        }
+                        else if (e.InnerException is NoMoreKeysAvailableException)
+                        {
+                            //If we do not have any outsider keys to use, just return what we have
+                            usedInsiderKey = true;
+                            return tornPlayerInitialList;
+                        }
+                        else
+                        {
+                            throw;
                         }
                     }
-                    else if (e.InnerException is NoMoreKeysAvailableException)
-                    {
-                        //If we do not have any outsider keys to use, just return what we have
-                        usedInsiderKey = true;
-                        return tornPlayerInitialList;
-                    }
-                    else
+                    catch (Exception)
                     {
                         throw;
                     }
                 }
-                catch (Exception)
+                
+                if (tornPlayer.Revivable == 1)
                 {
-                    throw;
+                    tornPlayerExtRevivableList.Add(tornPlayer);
                 }
-            }
-            
-            if (tornPlayer.Revivable == 1)
-            {
-                tornPlayerExtRevivableList.Add(tornPlayer);
-            }
 
-            membersChecked++;
-            
-            if (ctx is not null)
-                ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(String.Format("Rechecked {0} of {1} revivable members ", membersChecked, tornPlayerInitialList.Count))).Wait();
+                membersChecked++;
+                
+                if (ctx is not null)
+                    ctx.EditResponseAsync(new DiscordWebhookBuilder().WithContent(String.Format("Rechecked {0} of {1} revivable members ", membersChecked, tornPlayerInitialList.Count))).Wait();
 
+            }
+   
         }
-
+        
         return tornPlayerExtRevivableList; 
     }
 
     public List<TornFaction> GetFactionsForMonitoring()
     {
-        List<Database.Entities.TornFactions> dbFactions = _factionDao.GetFactionsForMonitoring();
+        List<TornFactions> dbFactions = _tornFactionsService.GetFactionsForMonitoring();
 
         List<TornFaction> tornFactions = new List<TornFaction>();
         foreach (var dbFaction in dbFactions)
@@ -273,11 +279,15 @@ public class FactionsService : IHostedService
 
         return tornFactions;
     }
-    
-    public UInt32 GetHomeFactionId()
+
+    public void SetHomeFactionIds(UInt32[] factionIds)
     {
-        //TODO = Move this to the DB
-        return _config.GetValue<UInt32>("TornFactionId"); //get faction id
+        _settingsFactionService.SetHomeFactionsIds(factionIds);
+    }
+    
+    public UInt32[] GetHomeFactionIds()
+    {
+        return _settingsFactionService.GetHomeFactionIds();
     }
     
     public Task StartAsync(CancellationToken cancellationToken)

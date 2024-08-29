@@ -25,36 +25,6 @@ namespace TornBot
 {
     internal class Config
     {
-        /// <summary>
-        /// Your bot's token.
-        /// </summary>
-        [JsonProperty("Token")]
-        internal string Token = "Discord Bot Token";
-
-        /// <summary>
-        /// Your bot's prefix
-        /// </summary>
-        [JsonProperty("Prefix")]
-        internal string Prefix = "!";
-
-        /// <summary>
-        /// Your Discord test guild
-        /// </summary>
-        [JsonProperty("TestGuild")]
-        internal string TestGuild = "Guild ID";
-
-
-        // <sumary>
-        // Torn API key
-        // </summary>
-        [JsonProperty("TornFactionId")]
-        internal string TornFactionId = "Torn Faction ID";
-
-
-        // <sumary>
-        // Torn API key
-        // </summary>
-
         [JsonProperty("DbHost")]
         internal string DbHost = "localhost";
 
@@ -66,15 +36,6 @@ namespace TornBot
 
         [JsonProperty("DbDatabase")]
         internal string DbDatabase = "tornbot";
-
-        [JsonProperty("StocksChannelId")]
-        internal string StocksChannelId = "Channel ID";
-
-        [JsonProperty("InactivePlayerChannelId")]
-        internal string InactivePlayerChannelId = "Channel ID";
-        
-        [JsonProperty("LogChannelId")]
-        internal string LogChannelId = "Channel ID";
 
 
         /// <summary>
@@ -111,10 +72,13 @@ namespace TornBot
                 PrintHeader();
 
                 Console.BackgroundColor = ConsoleColor.Yellow;
-                WriteCenter("WARNING", 3);
+                Console.WriteLine("");
+                Console.WriteLine("");
+                Console.WriteLine("");
+                Console.WriteLine("WARNING");
                 Console.ResetColor();
-                WriteCenter("Please fill in the config.json that was generated.", 1);
-                WriteCenter("Press any key to exit..", 1);
+                Console.WriteLine("Please fill in the config.json that was generated.");
+                Console.WriteLine("Press any key to exit..");
                 Console.SetCursorPosition(0, 0);
                 Console.ReadKey();
 
@@ -141,12 +105,11 @@ namespace TornBot
                 {
                     Console.ForegroundColor = ConsoleColor.Black;
                     Console.BackgroundColor = ConsoleColor.Yellow;
-                    WriteCenter("WARNING", 1);
+                    Console.WriteLine("");
+                    Console.WriteLine("WARNING");
                     Console.ResetColor();
-                    WriteCenter("Number of lines does not match number of internal strings. Please update config.json", 1);
-                    Console.WriteLine();
+                    Console.WriteLine("Number of lines does not match number of internal strings. Please update config.json");
                 }
-
             }
 
             var config = new ConfigurationBuilder()
@@ -163,22 +126,15 @@ namespace TornBot
             Console.BackgroundColor = ConsoleColor.Red;
             Console.ForegroundColor = ConsoleColor.Black;
 
-            WriteCenter("  ______                 ____        __ ", 2);
-            WriteCenter(" /_  __/___  _________  / __ )____  / /_");
-            WriteCenter("  / / / __ \\/ ___/ __ \\/ __  / __ \\/ __/");
-            WriteCenter(" / / / /_/ / /  / / / / /_/ / /_/ / /_  ");
-            WriteCenter("/_/  \\____/_/  /_/ /_/_____/\\____/\\__/  ");
-            WriteCenter("                                        ");
+            Console.WriteLine("");
+            Console.WriteLine("");
+            Console.WriteLine(@"  ______                 ____        __ ");
+            Console.WriteLine(@" /_  __/___  _________  / __ )____  / /_");
+            Console.WriteLine(@"  / / / __ \/ ___/ __ \/ __  / __ \/ __/");
+            Console.WriteLine(@" / / / /_/ / /  / / / / /_/ / /_/ / /_  ");
+            Console.WriteLine(@"/_/  \____/_/  /_/ /_/_____/\____/\__/  ");
+            Console.WriteLine("");
+            Console.ResetColor();
         }
-
-        private static void WriteCenter(string value, int skipline = 0)
-        {
-            for (int i = 0; i < skipline; i++)
-                Console.WriteLine();
-
-            Console.SetCursorPosition((Console.WindowWidth - value.Length) / 2, Console.CursorTop);
-            Console.WriteLine(value);
-        }
-
     }
 }

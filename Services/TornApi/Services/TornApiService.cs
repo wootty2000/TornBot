@@ -21,9 +21,11 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using TornBot.Entities;
 using TornBot.Exceptions;
 using TornBot.Services.Database;
+using TornBot.Services.Database.TornPlayers.Entities;
+using TornBot.Services.Database.TornPlayers.Service;
+using TornBot.Services.Settings.Service;
 
 namespace TornBot.Services.TornApi.Services;
 
@@ -31,8 +33,10 @@ public class TornApiService
 {
     private string baseUrl = "https://api.torn.com/";
 
-    private readonly IConfigurationRoot _config;
     private readonly IServiceProvider _serviceProvider;
+    private readonly SettingsFactionService _settingsFactionService;
+    private readonly TornPlayersService _tornPlayersService;
+
     
     private readonly int _rateLimitPerMinutePerKey;
     private readonly TimeSpan _rateLimitWindow;
@@ -88,10 +92,16 @@ public class TornApiService
         Invalid = 3
     }
 
-    public TornApiService(IConfigurationRoot config, IServiceProvider serviceProvider)
+    public TornApiService
+    (
+        IServiceProvider serviceProvider,
+        SettingsFactionService settingsFactionService,
+        TornPlayersService tornPlayersService
+    )
     {
-        _config = config;
         _serviceProvider = serviceProvider;
+        _settingsFactionService = settingsFactionService;
+        _tornPlayersService = tornPlayersService;
         
         _rateLimitPerMinutePerKey = 20;
         _rateLimitWindow = TimeSpan.FromSeconds(60);
@@ -155,26 +165,12 @@ public class TornApiService
             TornBot.Entities.KeyInfo apiKeyInfo = GetApiKeyInfo(apiKey);
             TornBot.Entities.TornPlayer tornPlayer = GetPlayer(0, apiKey);
 
-            TornBot.Services.Players.Database.Entities.TornPlayer? dbTornPlayer = database.TornPlayers.FirstOrDefault(s => s.Id == tornPlayer.Id);
-
-            if (dbTornPlayer != null)
-            {
-                dbTornPlayer.ParseTornPlayer(tornPlayer);
-                database.TornPlayers.Update(dbTornPlayer);
-                database.SaveChanges();
-                //TODO - log updated TornPlayer via AddApiKey
-            }
-            else
-            {
-                database.TornPlayers.Add(new TornBot.Services.Players.Database.Entities.TornPlayer(tornPlayer));
-                database.SaveChanges();
-                //TODO - log added new TornPlayer via AddApiKey
-            }
-
+            _tornPlayersService.SavePlayer(tornPlayer);
+            
             //add api key with info to database
-            UInt32 homeFactionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
-
-            KeyAccessLevel keyAccessLevel = CalculateKeyAccessLevel(apiKeyInfo, tornPlayer.FactionId, homeFactionId);
+            UInt32[] homeFactionIds = _settingsFactionService.GetHomeFactionIds();
+            
+            KeyAccessLevel keyAccessLevel = CalculateKeyAccessLevel(apiKeyInfo, tornPlayer.FactionId, homeFactionIds);
             
             TornBot.Services.Database.Entities.ApiKeys? dbApiKeys = database.ApiKeys.Where(s => s.PlayerId == tornPlayer.Id).FirstOrDefault();
             
@@ -224,7 +220,12 @@ public class TornApiService
         }
     }
 
-    private KeyAccessLevel CalculateKeyAccessLevel(TornBot.Entities.KeyInfo apiKeyInfo, UInt32 playerFactionId, UInt32 homeFactionId)
+    private KeyAccessLevel CalculateKeyAccessLevel
+    (
+        TornBot.Entities.KeyInfo apiKeyInfo,
+        UInt32 playerFactionId,
+        UInt32[] homeFactionIds
+    )
     {
         KeyAccessLevel keyAccessLevel = apiKeyInfo.TornAccessLevel switch
         {
@@ -242,7 +243,8 @@ public class TornApiService
             keyAccessLevel = (KeyAccessLevel)(AccessLevelFaction | (byte)keyAccessLevel);
         }
 
-        if (playerFactionId != homeFactionId) //it is outside api key
+        //if (playerFactionId != homeFactionId) //it is outside api key
+        if (!homeFactionIds.Contains(playerFactionId))
         {
             keyAccessLevel = (KeyAccessLevel)(AccessLevelOutsider | (byte)keyAccessLevel);
         }
@@ -374,7 +376,8 @@ public class TornApiService
     /// <returns>bool of if the api is from the home faction or false if the API call failed</returns>
     public bool IsApiKeyFromHomeFaction(string apiKey)
     {
-        UInt32 homeFactionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
+        UInt32[] homeFactionIds = _settingsFactionService.GetHomeFactionIds();
+        
         UInt32 keyFactionId;
         
         using IServiceScope serviceProviderScoped = _serviceProvider.CreateScope();
@@ -404,7 +407,7 @@ public class TornApiService
         else
             keyFactionId = dbApiKeys.First().FactionId;
 
-        return keyFactionId == homeFactionId;
+        return homeFactionIds.Contains(keyFactionId);
     }
     
     /// <summary>
@@ -457,8 +460,7 @@ public class TornApiService
         TornBot.Entities.KeyInfo apiKeyInfo;
         KeyAccessLevel keyAccessLevel;
 
-        //TODO = Move this to the DB
-        UInt32 homeFactionId = _config.GetValue<UInt32>("TornFactionId"); //get faction id
+        UInt32[] homeFactionIds = _settingsFactionService.GetHomeFactionIds();
 
         foreach (var dbApiKey in dbApiKeys)
         {
@@ -485,7 +487,7 @@ public class TornApiService
                 }
                 throw;
             }
-            keyAccessLevel = CalculateKeyAccessLevel(apiKeyInfo, dbApiKey.FactionId, homeFactionId);
+            keyAccessLevel = CalculateKeyAccessLevel(apiKeyInfo, dbApiKey.FactionId, homeFactionIds);
 
             if (dbApiKey.TornAccessLevel != (byte)keyAccessLevel)
             {
@@ -703,7 +705,7 @@ public class TornApiService
             
             return faction.ToTornFaction();
         }
-        catch (ApiCallFailureException e)
+        catch (ApiCallFailureException)
         {
             throw;
         }

@@ -20,8 +20,8 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.SlashCommands;
 using TornBot.Entities;
+using TornBot.Services.Database.PlayerStatus.Dao;
 using TornBot.Services.Discord.Interfaces;
-using TornBot.Services.Players.Database.Dao;
 using TornBot.Services.Players.Service;
 
 namespace TornBot.Features.FactionActivityMonitor.Discord;

@@ -16,7 +16,6 @@
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 using TornBot.Entities;
-using TornBot.Services.Players.Database.Entities;
 
 namespace TornBot.Services.Players.Service;
 

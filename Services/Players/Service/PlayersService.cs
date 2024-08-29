@@ -17,50 +17,47 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
 using TornBot.Entities;
 using TornBot.Services.Database;
 using TornBot.Exceptions;
 using TornBot.Services.Armory.Service;
-using TornBot.Services.Players.Database.Dao;
-using TornBot.Services.Players.Database.Entities;
+using TornBot.Services.Database.PlayerStatus;
+using TornBot.Services.Database.PlayerStatus.Service;
+using TornBot.Services.Database.TornPlayers.Entities;
+using TornBot.Services.Database.TornPlayers.Service;
 using TornBot.Services.TornApi.Services;
 using TornBot.Services.TornStatsApi.Services;
 using TornPlayer = TornBot.Entities.TornPlayer;
 
 namespace TornBot.Services.Players.Service
 {
-    public class PlayersService : IHostedService
+    public class PlayersService
     {
         private const int MaxStatsCacheAge = 14;
         private const int MaxTornPlayerCacheAge = 7;
         
-        private readonly IConfigurationRoot _config;
         private DatabaseContext _database;
         private TornApiService _torn;
         private TornStatsApiService _tornStats;
         private readonly ArmoryService _armoryService;
-        private readonly ITornPlayerDao _tornPlayerDao;
-        private readonly IPlayerStatusDao _playerStatusDao;
+        private readonly PlayerStatusService _playerStatusService;
+        private readonly TornPlayersService _tornPlayersService;
         
         public PlayersService(
             DatabaseContext database,
             TornApiService torn,
             TornStatsApiService tornStats,
-            IConfigurationRoot config,
             ArmoryService armoryService,
-            ITornPlayerDao tornPlayerDao,
-            IPlayerStatusDao playerStatusDao
+            PlayerStatusService playerStatusService,
+            TornPlayersService tornPlayersService
         ) 
         {
             _database = database;
             _torn = torn;
             _tornStats = tornStats;
-            _config = config;
             _armoryService = armoryService;
-            _tornPlayerDao = tornPlayerDao;
-            _playerStatusDao = playerStatusDao;
+            _playerStatusService = playerStatusService;
+            _tornPlayersService = tornPlayersService;
         }
         
         /// <summary>
@@ -76,18 +73,21 @@ namespace TornBot.Services.Players.Service
             Entities.TornPlayer tornPlayer;
 
             // Lets try and get a record from the database. If there is no record, we get given a null
-            Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.FirstOrDefault(s => s.Id == id);
-
+            //TornBot.Services.Database.TornPlayer.Entity.TornPlayer? dbPlayer = _database.TornPlayers.FirstOrDefault(s => s.Id == id);
+            tornPlayer = _tornPlayersService.GetPlayer(id);
+            
             // Check what we got from the database
-            if (dbPlayer == null)
+            //if (dbPlayer == null)
+            if (tornPlayer.Id == 0)
             {
                 //There was no record in the database. Fetch from Torn API and add to the database
                 try
                 {
                     tornPlayer = _torn.GetPlayer(id);
 
-                    _database.TornPlayers.Add(new Database.Entities.TornPlayer(tornPlayer));
-                    _database.SaveChanges();
+                    //_database.TornPlayers.Add(new Services.Database.TornPlayer.Entity.TornPlayer(tornPlayer));
+                    //_database.SaveChanges();
+                    _tornPlayersService.SavePlayer(tornPlayer);
 
                     return tornPlayer;
                 }
@@ -99,29 +99,33 @@ namespace TornBot.Services.Players.Service
                 }
                 
             }
-            else if (dbPlayer.LastUpdated.CompareTo(DateTime.UtcNow.AddDays(-MaxTornPlayerCacheAge)) < 0 || forceUpdate)
+            //else if (dbPlayer.LastUpdated.CompareTo(DateTime.UtcNow.AddDays(-MaxTornPlayerCacheAge)) < 0 || forceUpdate)
+            else if (tornPlayer.DatabaseLastUpdated.CompareTo(DateTime.UtcNow.AddDays(-MaxTornPlayerCacheAge)) < 0 || forceUpdate)
             {
                 // We have a record in the database, but it's stale so we need to update with a fresh pull
                 // Or, we were told to get a fresh copy
                 try
                 {
                     tornPlayer = _torn.GetPlayer(id);
-                    dbPlayer.ParseTornPlayer(tornPlayer);
-                    _database.TornPlayers.Update(dbPlayer);
-                    _database.SaveChanges();
+                    //dbPlayer.ParseTornPlayer(tornPlayer);
+                    //_database.TornPlayers.Update(dbPlayer);
+                    //_database.SaveChanges();
+                    _tornPlayersService.SavePlayer(tornPlayer);
 
                     return tornPlayer;
                 }
                 catch (Exception e)
                 {
                     //Something went wrong in getting the API data. Just return the existing data instead
-                    return dbPlayer.ToTornPlayer();
+                    //return dbPlayer.ToTornPlayer();
+                    return tornPlayer;
                 }
             }
             else
             {
                 // The record from the database was ok to use
-                return dbPlayer.ToTornPlayer();
+                //return dbPlayer.ToTornPlayer();
+                return tornPlayer;
             }
         }
 
@@ -137,15 +141,15 @@ namespace TornBot.Services.Players.Service
         /// <exception cref="ApiCallFailureException">Something went wrong and the inner exception has more details</exception>
         public Entities.TornPlayer GetPlayer(string name, bool forceUpdate = false)
         {
-            TornBot.Entities.TornPlayer tornPlayer;
+            Entities.TornPlayer tornPlayer;
             
             // Lets try and get a record from the database. If there is no record, we get given a null
-            Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name  == name).FirstOrDefault();
-
-            if (dbPlayer != null)
+            Entities.TornPlayer dbPlayer = _tornPlayersService.GetPlayer(name);
+            
+            if (dbPlayer.Id > 0)
             {
                 //Check to see if the local cache is stale or forceUpdate is true
-                if (dbPlayer.LastUpdated.CompareTo(DateTime.Now.AddDays(-MaxTornPlayerCacheAge)) < 0 || forceUpdate)
+                if (dbPlayer.DatabaseLastUpdated.CompareTo(DateTime.Now.AddDays(-MaxTornPlayerCacheAge)) < 0 || forceUpdate)
                 {
                     try
                     {
@@ -153,9 +157,7 @@ namespace TornBot.Services.Players.Service
                         tornPlayer = _torn.GetPlayer(dbPlayer.Id);
                         if (tornPlayer.Name == name)
                         {
-                            //The players has not changed their name. We now have a valid player Id
-                            _database.TornPlayers.Update(new Database.Entities.TornPlayer(tornPlayer));
-                            _database.SaveChanges();
+                            _tornPlayersService.SavePlayer(tornPlayer);
                             return tornPlayer;
                         }
                     }
@@ -174,13 +176,13 @@ namespace TornBot.Services.Players.Service
                     catch (Exception e)
                     {
                         //We've failed to get any updated data but we still have our DB record. Use it
-                        return dbPlayer.ToTornPlayer();
+                        return dbPlayer;
                     }
                 }
                 else
                 {
                     //Record is not stale. Lets use it
-                    return dbPlayer.ToTornPlayer();
+                    return dbPlayer;
                 }
             }
             else
@@ -201,8 +203,9 @@ namespace TornBot.Services.Players.Service
 
                     tornPlayer = _torn.GetPlayer(id);
 
-                    _database.TornPlayers.Add(new Database.Entities.TornPlayer(tornPlayer));
-                    _database.SaveChanges();
+                    //_database.TornPlayers.Add(new Services.Database.TornPlayer.Entity.TornPlayer(tornPlayer));
+                    //_database.SaveChanges();
+                    _tornPlayersService.SavePlayer(tornPlayer);
 
                     return tornPlayer;
                 }
@@ -220,20 +223,13 @@ namespace TornBot.Services.Players.Service
         public void SavePlayer(TornPlayer player)
         {
             //TODO We should be passing a DB entity in to the DAO, not a generic entity
-            _tornPlayerDao.SavePlayer(player);
+            _tornPlayersService.SavePlayer(player);
         }
         
         public void SavePlayers(List<TornPlayer> players)
         {
-            List<Database.Entities.TornPlayer> dbPlayers = new List<Database.Entities.TornPlayer>();
-
-            foreach (var player in players)
-            {
-                dbPlayers.Add(new Database.Entities.TornPlayer(player));
-            }
-            _tornPlayerDao.SavePlayers(dbPlayers);
+            _tornPlayersService.SavePlayers(players);
         }
-
 
         /// <summary>
         /// Attempts to find a Torn Player by name
@@ -258,9 +254,9 @@ namespace TornBot.Services.Players.Service
                 }
                 else
                 {
-                    Database.Entities.TornPlayer? dbPlayer = _database.TornPlayers.Where(s => s.Name == IdOrName).FirstOrDefault();
+                    Entities.TornPlayer dbPlayer = _tornPlayersService.GetPlayer(IdOrName);
                     
-                    if (dbPlayer != null)
+                    if (dbPlayer.Id > 0)
                     {
                         dbBattleStats = _database.BattleStats.Where(s => s.PlayerId == dbPlayer.Id).FirstOrDefault();
                     }
@@ -572,7 +568,7 @@ namespace TornBot.Services.Players.Service
         /// <returns>void</returns>
         public void RecordPlayerStatus(TornBot.Entities.TornPlayer tornPlayer, DateTime now)
         {
-            _playerStatusDao.RecordPlayerStatus(tornPlayer.Id, (byte)tornPlayer.Status, (byte)tornPlayer.OnlineStatus, now); 
+            _playerStatusService.RecordPlayerStatus(tornPlayer.Id, (byte)tornPlayer.Status, (byte)tornPlayer.OnlineStatus, now); 
         }
 
         public void RecordPlayerStatuses(List<TornPlayer> players, DateTime now)
@@ -584,7 +580,7 @@ namespace TornBot.Services.Players.Service
                 playerStatuses.Add((player.Id, (byte)player.Status, (byte)player.OnlineStatus));
             }
             
-            _playerStatusDao.RecordPlayerStatuses(playerStatuses, now);
+            _playerStatusService.RecordPlayerStatuses(playerStatuses, now);
         }
         
         /// <summary>
@@ -594,7 +590,7 @@ namespace TornBot.Services.Players.Service
         /// <returns>List<DateTime></returns>
         public List<DateTime> GetPlayerStatusDatesForPlayer(UInt32 playerId)
         {
-            List<DateTime> dates = _playerStatusDao.GetPlayerStatusDatesForPlayer(playerId);
+            List<DateTime> dates = _playerStatusService.GetPlayerStatusDatesForPlayer(playerId);
 
             return dates;
         }
@@ -607,12 +603,9 @@ namespace TornBot.Services.Players.Service
         /// <returns>List<DateTime></returns>
         public PlayerStatusData GetPlayerStatusData(UInt32 playerId, DateTime startDate)
         {
-            PlayerStatus? dbPlayerStatus = _playerStatusDao.GetPlayerStatusData(playerId, startDate);
+            PlayerStatusData statusData = _playerStatusService.GetPlayerStatusData(playerId, startDate);
             
-            if (dbPlayerStatus != null)
-                return dbPlayerStatus.ToPlayerStatusData();
-
-            return new PlayerStatusData();
+            return statusData;
         }
         
         /// <summary>
@@ -622,20 +615,8 @@ namespace TornBot.Services.Players.Service
         /// <returns>List<TornBot.Entities.TornPlayer></returns>
         public List<TornBot.Entities.TornPlayer> GetPlayersInFaction(UInt32 factionId)
         {
-            List<TornBot.Entities.TornPlayer> players = _tornPlayerDao.GetMembersInFaction(factionId);
+            List<TornBot.Entities.TornPlayer> players = _tornPlayersService.GetMembersInFaction(factionId);
             return players;
-        }
-
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            //throw new NotImplementedException();
-            return Task.CompletedTask;
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            //throw new NotImplementedException();
-            return Task.CompletedTask;
         }
     }
 }
